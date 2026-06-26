@@ -1,0 +1,12 @@
+# ADS-B feeder status dashboard
+server.modules += ( "mod_proxy" )
+
+alias.url += (
+  "/dashboard/" => "@REPO_ROOT@/dashboard/"
+)
+
+$HTTP["url"] =~ "^/dashboard/api/" {
+  proxy.server = ( "" => (
+    ( "host" => "127.0.0.1", "port" => 8765 )
+  ))
+}

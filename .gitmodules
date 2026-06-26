@@ -1,0 +1,3 @@
+[submodule "muninn"]
+	path = muninn
+	url = https://github.com/Yggdrasil-AI-labs/adsb-to-wdgwars.git

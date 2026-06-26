@@ -1,0 +1,6 @@
+# Feeder dashboard operations (installed by scripts/install-dashboard.sh)
+@FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart readsb
+@FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart tar1090
+@FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart airplanes-feed
+@FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart airplanes-mlat
+@FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/local/bin/readsb-gain *

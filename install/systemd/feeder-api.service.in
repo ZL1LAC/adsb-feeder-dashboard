@@ -1,0 +1,14 @@
+[Unit]
+Description=Feeder dashboard API
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 @REPO_ROOT@/dashboard/push-server.py
+Environment=FEEDER_REPO_ROOT=@REPO_ROOT@
+Environment=FEEDER_MUNINN_ROOT=@MUNINN_ROOT@
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

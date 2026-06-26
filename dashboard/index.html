@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0f14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="ADS-B Feeder">
+  <title>ADS-B Feeder Dashboard</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css?v=5">
+</head>
+<body>
+  <header class="header">
+    <div class="header-main">
+      <h1>ADS-B Feeder</h1>
+      <p class="subtitle" id="host-line">Loading…</p>
+      <div class="health-banner" id="health-banner" aria-label="System health"></div>
+    </div>
+    <div class="header-actions">
+      <a class="btn" href="/tar1090/" target="_blank">Live map</a>
+      <a class="btn btn-ghost" href="https://airplanes.live/myfeed/" target="_blank" rel="noopener">airplanes.live</a>
+      <a class="btn btn-ghost" href="https://wdgwars.pl/" target="_blank" rel="noopener">WDGoWars</a>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="card card-hero order-reception" id="reception-card">
+      <h2>Reception</h2>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-value" id="aircraft-total">—</span>
+          <span class="stat-label">Aircraft</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="aircraft-positioned">—</span>
+          <span class="stat-label">With position</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="messages">—</span>
+          <span class="stat-label">Messages</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value snr-value" id="snr">—</span>
+          <span class="stat-label">SNR dB</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="gain">—</span>
+          <span class="stat-label">Gain</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="max-range">—</span>
+          <span class="stat-label">Max range</span>
+        </div>
+      </div>
+      <div class="snr-health" id="snr-health"></div>
+      <p class="meta" id="readsb-meta"></p>
+    </section>
+
+    <section class="card card-compact order-wdg" id="wdg-card">
+      <div class="wdg-header">
+        <h2>WDGoWars</h2>
+        <span class="wdg-player" id="wdg-user">—</span>
+      </div>
+      <div class="wdg-score wdg-score-compact" id="wdg-score">
+        <div class="score-stat">
+          <span class="score-value" id="wdg-aircraft-score">—</span>
+          <span class="score-label">Aircraft</span>
+        </div>
+        <div class="score-stat">
+          <span class="score-value" id="wdg-total-score">—</span>
+          <span class="score-label">Total</span>
+        </div>
+        <div class="score-stat">
+          <span class="score-value" id="wdg-wifi-score">—</span>
+          <span class="score-label">WiFi</span>
+        </div>
+        <div class="score-stat">
+          <span class="score-value" id="wdg-ble-score">—</span>
+          <span class="score-label">BLE</span>
+        </div>
+      </div>
+      <div class="wdg-status-compact">
+        <div class="upload-timeline" id="upload-timeline" title="Recent uploads (oldest → newest)"></div>
+        <span class="wdg-next-line" id="wdg-next">—</span>
+      </div>
+      <p class="wdg-summary-line" id="wdg-summary">—</p>
+      <div class="wdg-actions">
+        <div class="interval-row">
+          <label for="interval-select">Every</label>
+          <select id="interval-select">
+            <option value="1">1 min</option>
+            <option value="5" selected>5 min</option>
+            <option value="10">10 min</option>
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+          </select>
+          <button type="button" class="btn btn-ghost btn-sm" id="interval-btn">Apply</button>
+        </div>
+        <button type="button" id="push-btn" class="btn btn-sm">Push now</button>
+      </div>
+      <p class="meta" id="interval-status"></p>
+      <p id="push-status" class="push-status"></p>
+    </section>
+
+    <section class="card card-wide order-aircraft" id="aircraft-card">
+      <h2>Aircraft now</h2>
+      <div class="table-toolbar">
+        <input type="search" id="aircraft-search" class="table-search" placeholder="Search ICAO or flight…" autocomplete="off">
+        <span class="table-count" id="aircraft-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="hex">ICAO</th>
+              <th class="sortable" data-sort="flight">Flight</th>
+              <th>Type</th>
+              <th class="col-hide-sm">Lat</th>
+              <th class="col-hide-sm">Lon</th>
+              <th class="sortable col-hide-sm" data-sort="dist">Dist</th>
+              <th class="col-hide-sm">Alt</th>
+              <th class="col-hide-md">Speed</th>
+              <th class="sortable" data-sort="rssi">RSSI</th>
+              <th class="sortable sort-active" data-sort="seen">Seen</th>
+            </tr>
+          </thead>
+          <tbody id="aircraft-rows">
+            <tr><td colspan="10" class="empty">Waiting for data…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card card-wide order-history" id="history-card">
+      <h2>24h history</h2>
+      <div class="history-grid" id="history-charts"></div>
+    </section>
+
+    <section class="card card-wide order-map collapsible" id="map-card">
+      <div class="card-header-toggle">
+        <h2>Live map</h2>
+        <button type="button" class="collapse-btn" data-target="map-body" aria-expanded="true">Hide</button>
+      </div>
+      <div class="collapse-body" id="map-body">
+        <iframe class="map-frame" src="/tar1090/" title="tar1090 live map"></iframe>
+      </div>
+    </section>
+
+    <section class="card card-wide order-log collapsible" id="log-card">
+      <div class="card-header-toggle">
+        <h2>Muninn log</h2>
+        <button type="button" class="collapse-btn" data-target="log-body" aria-expanded="true">Hide</button>
+      </div>
+      <div class="collapse-body" id="log-body">
+        <pre class="log" id="muninn-log">No uploads yet.</pre>
+      </div>
+    </section>
+
+    <section class="card order-services" id="services-card">
+      <h2>Services</h2>
+      <ul class="service-list" id="services"></ul>
+    </section>
+
+    <section class="card order-feeds" id="feeds-card">
+      <h2>Upstream feeds</h2>
+      <ul class="service-list" id="feeds"></ul>
+      <p class="meta" id="sdr-line"></p>
+      <p class="meta" id="recovery-line"></p>
+    </section>
+
+    <section class="card order-ops" id="ops-card">
+      <h2>Operations</h2>
+      <div class="ops-grid">
+        <button type="button" class="btn btn-ghost ops-btn" id="restart-readsb-btn">Restart readsb</button>
+        <button type="button" class="btn btn-ghost ops-btn" id="restart-all-btn">Restart all services</button>
+      </div>
+      <div class="gain-row">
+        <label for="gain-input">Gain</label>
+        <input type="text" id="gain-input" placeholder="36 or auto" inputmode="decimal">
+        <button type="button" class="btn" id="gain-btn">Apply</button>
+      </div>
+      <div class="gain-presets">
+        <span class="preset-label">Presets</span>
+        <button type="button" class="btn btn-ghost preset-btn" data-gain="auto">auto</button>
+        <button type="button" class="btn btn-ghost preset-btn" data-gain="36">36</button>
+        <button type="button" class="btn btn-ghost preset-btn" data-gain="40">40</button>
+        <button type="button" class="btn btn-ghost preset-btn" data-gain="49.6">49.6</button>
+      </div>
+      <p class="meta" id="ops-status"></p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span id="updated">Refreshing…</span>
+  </footer>
+  <script src="charts.js?v=2"></script>
+  <script src="app.js?v=8"></script>
+</body>
+</html>

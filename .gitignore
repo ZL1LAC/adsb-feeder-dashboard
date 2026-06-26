@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Runtime / generated
+dashboard/status.json
+dashboard/history.json
+dashboard/history.jsonl
+dashboard/watch-state.json
+logs/
+feeder.env
+
+# Secrets
+api.key
+*.key
+.env
+.env.local
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Muninn submodule has its own ignores; keep submodule tracked
+!muninn/

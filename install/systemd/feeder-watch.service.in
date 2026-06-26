@@ -1,0 +1,8 @@
+[Unit]
+Description=Check SDR and recover readsb if needed
+# managed-by-feeder-dashboard
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 @REPO_ROOT@/dashboard/feeder-watch.py
+Environment=FEEDER_REPO_ROOT=@REPO_ROOT@

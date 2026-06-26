@@ -1,0 +1,12 @@
+[Unit]
+Description=Feeder SDR recovery watcher (every 60s)
+# managed-by-feeder-dashboard
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=60s
+AccuracySec=10s
+Unit=feeder-watch.service
+
+[Install]
+WantedBy=timers.target

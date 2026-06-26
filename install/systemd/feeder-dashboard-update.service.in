@@ -1,0 +1,9 @@
+[Unit]
+Description=Update ADS-B feeder dashboard status.json
+# managed-by-feeder-dashboard
+
+[Service]
+Type=oneshot
+ExecStart=@MUNINN_ROOT@/.venv/bin/python @REPO_ROOT@/dashboard/gen-status.py
+Environment=FEEDER_REPO_ROOT=@REPO_ROOT@
+Environment=FEEDER_MUNINN_ROOT=@MUNINN_ROOT@
