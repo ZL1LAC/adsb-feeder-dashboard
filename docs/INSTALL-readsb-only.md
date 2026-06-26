@@ -36,7 +36,7 @@ Ensure tar1090 is served (usually `/etc/lighttpd/conf-enabled/88-tar1090.conf`).
 ## 3. Clone and install dashboard
 
 ```bash
-git clone https://github.com/YOUR_USER/adsb-feeder-dashboard.git
+git clone https://github.com/ZL1LAC/adsb-feeder-dashboard.git
 cd adsb-feeder-dashboard
 git submodule update --init --recursive
 

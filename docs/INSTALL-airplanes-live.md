@@ -20,7 +20,7 @@ sudo apt install -y git lighttpd python3 python3-venv python3-pip
 This installs readsb, tar1090, and the airplanes.live upstream feed:
 
 ```bash
-git clone https://github.com/YOUR_USER/adsb-feeder-dashboard.git
+git clone https://github.com/ZL1LAC/adsb-feeder-dashboard.git
 cd adsb-feeder-dashboard
 git submodule update --init --recursive
 

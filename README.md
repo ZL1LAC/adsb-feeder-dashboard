@@ -21,7 +21,7 @@ Built for **readsb + tar1090** stacks, with first-class support for [airplanes.l
 ### airplanes.live (recommended)
 
 ```bash
-git clone https://github.com/YOUR_USER/adsb-feeder-dashboard.git
+git clone https://github.com/ZL1LAC/adsb-feeder-dashboard.git
 cd adsb-feeder-dashboard
 git submodule update --init --recursive   # Muninn
 
@@ -35,7 +35,7 @@ Open `http://<pi-ip>/dashboard/`
 ### readsb + tar1090 only (no airplanes.live)
 
 ```bash
-git clone https://github.com/YOUR_USER/adsb-feeder-dashboard.git
+git clone https://github.com/ZL1LAC/adsb-feeder-dashboard.git
 cd adsb-feeder-dashboard
 git submodule update --init --recursive
 
