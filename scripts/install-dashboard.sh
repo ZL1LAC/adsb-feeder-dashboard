@@ -37,6 +37,22 @@ if [[ ! -f "$REPO_ROOT/feeder.env" ]]; then
   sed -i "s|^FEEDER_MUNINN_ROOT=.*|FEEDER_MUNINN_ROOT=$MUNINN_ROOT|" "$REPO_ROOT/feeder.env"
 fi
 
+set_env_var() {
+  local key="$1" value="$2"
+  if grep -q "^${key}=" "$REPO_ROOT/feeder.env"; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "$REPO_ROOT/feeder.env"
+  else
+    echo "${key}=${value}" >> "$REPO_ROOT/feeder.env"
+  fi
+}
+
+if [[ -n "${FEED_PROFILE:-}" ]]; then
+  set_env_var FEED_PROFILE "$FEED_PROFILE"
+  if [[ "$FEED_PROFILE" == "adsbim" ]]; then
+    set_env_var FEEDER_LOCATION_FILE "/opt/adsb/config/.env"
+  fi
+fi
+
 echo "Installing systemd user units..."
 for unit in feeder-api.service feeder-dashboard-update.service feeder-dashboard.timer feeder-watch.service feeder-watch.timer; do
   subst "$INSTALL_DIR/systemd/${unit}.in" "$USER_SYSTEMD/${unit}"

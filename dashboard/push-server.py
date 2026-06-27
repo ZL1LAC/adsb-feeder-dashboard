@@ -17,6 +17,7 @@ from feeder_paths import (
     UPLOAD_SCRIPT as UPLOAD,
     VENV_PYTHON as MUNINN,
 )
+from feeder_profile import restart_units
 
 HOST, PORT = "127.0.0.1", 8765
 
@@ -150,7 +151,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _restart_readsb(self) -> None:
         results = []
-        for unit in ("readsb", "tar1090"):
+        for unit in restart_units("readsb"):
             proc = run_cmd(["sudo", "systemctl", "restart", unit], timeout=30)
             results.append(f"{unit}: {'ok' if proc.returncode == 0 else proc.stderr.strip()}")
         refresh_status()
@@ -159,7 +160,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _restart_all(self) -> None:
         results = []
-        for unit in ("readsb", "tar1090", "airplanes-feed", "airplanes-mlat"):
+        for unit in restart_units("all"):
             proc = run_cmd(["sudo", "systemctl", "restart", unit], timeout=30)
             results.append(f"{unit}: {'ok' if proc.returncode == 0 else proc.stderr.strip()}")
         refresh_status()

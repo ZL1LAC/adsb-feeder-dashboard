@@ -3,4 +3,6 @@
 @FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart tar1090
 @FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart airplanes-feed
 @FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart airplanes-mlat
+@FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart adsb-docker
+@FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart adsb-setup
 @FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/local/bin/readsb-gain *

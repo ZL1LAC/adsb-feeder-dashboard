@@ -78,6 +78,8 @@ function renderServices(services) {
     tar1090: "tar1090 (web map)",
     airplanes_feed: "airplanes.live feed",
     airplanes_mlat: "airplanes.live MLAT",
+    adsb_docker: "adsb.im docker stack",
+    adsb_setup: "adsb.im web UI",
     muninn: "WDGoWars uploader",
   };
   return Object.entries(services)
@@ -85,8 +87,20 @@ function renderServices(services) {
     .join("");
 }
 
-function renderFeeds(feeds, sdrOk) {
+function feedsHealthy(feeds, profile) {
+  if (profile === "adsbim") return !!feeds.adsb_im_docker;
+  return !!(feeds.airplanes_live && feeds.airplanes_mlat);
+}
+
+function renderFeeds(feeds, sdrOk, profile) {
   const sdrPill = sdrOk ? pill("connected") : pill(false);
+  if (profile === "adsbim") {
+    return [
+      `<li><span>SDR dongle</span>${sdrPill}</li>`,
+      `<li><span>adsb.im docker</span>${pill(feeds.adsb_im_docker ? "connected" : false)}</li>`,
+      `<li><span>adsb.im setup UI</span>${pill(feeds.adsb_im_setup ? "connected" : false)}</li>`,
+    ].join("");
+  }
   return [
     `<li><span>SDR dongle</span>${sdrPill}</li>`,
     `<li><span>airplanes.live beast</span>${pill(feeds.airplanes_live ? "connected" : false)}</li>`,
@@ -250,6 +264,23 @@ function healthChip(label, ok, warn, targetId) {
   return `<button type="button" class="health-chip ${cls}"${scroll} title="${label}">${label}</button>`;
 }
 
+function renderHeaderLinks(status) {
+  const aggLink = $("aggregator-link");
+  const localLink = $("adsbim-local-link");
+  if (aggLink && status.links) {
+    aggLink.href = status.links.url;
+    aggLink.textContent = status.links.label;
+  }
+  if (localLink) {
+    const show = status.profile === "adsbim";
+    localLink.hidden = !show;
+    if (show) {
+      const host = window.location.hostname || status.hostname || "localhost";
+      localLink.href = `http://${host}:1099`;
+    }
+  }
+}
+
 function renderHealthBanner(status) {
   const el = $("health-banner");
   if (!el) return;
@@ -261,7 +292,7 @@ function renderHealthBanner(status) {
   const readsbState = (services.readsb || "").toLowerCase();
   const readsbOk = readsbState === "active";
   const readsbWarn = readsbState === "activating";
-  const feedsOk = feeds.airplanes_live && feeds.airplanes_mlat;
+  const feedsOk = feedsHealthy(feeds, status.profile);
   const muninnTimer = (services.muninn || "").toLowerCase() === "active";
   const wdgOk = muninn.last_ok !== false && muninnTimer;
 
@@ -400,6 +431,7 @@ async function refresh() {
     const reception = status.reception || {};
 
     renderHealthBanner(status);
+    renderHeaderLinks(status);
 
     setText("aircraft-total", list.length);
     setText("aircraft-positioned", positioned.length);
@@ -444,7 +476,7 @@ async function refresh() {
     );
 
     setHtml("services", renderServices(status.services || {}));
-    setHtml("feeds", renderFeeds(status.feeds || {}, status.sdr_ok !== false));
+    setHtml("feeds", renderFeeds(status.feeds || {}, status.sdr_ok !== false, status.profile));
     setText("sdr-line", status.sdr ? `USB: ${status.sdr}` : "USB: SDR not detected");
 
     const recovery = status.watch?.last_recovery;

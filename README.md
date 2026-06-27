@@ -2,7 +2,7 @@
 
 Web dashboard for Raspberry Pi ADS-B feeders: live reception stats, 24h history charts, tar1090 map, WDGoWars score/uploads, and one-click ops (restart readsb, gain presets).
 
-Built for **readsb + tar1090** stacks, with first-class support for [airplanes.live](https://airplanes.live/) feeders and optional [WDGoWars](https://wdgwars.pl/) uploads via [Muninn](https://github.com/Yggdrasil-AI-labs/adsb-to-wdgwars).
+Built for **readsb + tar1090** stacks, with first-class support for [airplanes.live](https://airplanes.live/) and [adsb.im](https://adsb.im/) feeders, plus optional [WDGoWars](https://wdgwars.pl/) uploads via [Muninn](https://github.com/Yggdrasil-AI-labs/adsb-to-wdgwars).
 
 ## Features
 
@@ -32,6 +32,18 @@ sudo ./scripts/install-airplanes.sh      # readsb + tar1090 + airplanes.live fee
 
 Open `http://<pi-ip>/dashboard/`
 
+### adsb.im
+
+```bash
+git clone https://github.com/ZL1LAC/adsb-feeder-dashboard.git
+cd adsb-feeder-dashboard
+git submodule update --init --recursive
+
+# Install adsb.im first — see docs/INSTALL-adsbim.md
+./scripts/install.sh --profile adsbim
+./scripts/go-live.sh YOUR_WDGOWARS_API_KEY   # optional
+```
+
 ### readsb + tar1090 only (no airplanes.live)
 
 ```bash
@@ -47,6 +59,7 @@ git submodule update --init --recursive
 ## Documentation
 
 - [Install with airplanes.live](docs/INSTALL-airplanes-live.md)
+- [Install with adsb.im](docs/INSTALL-adsbim.md)
 - [Install readsb-only](docs/INSTALL-readsb-only.md)
 - [Architecture](docs/ARCHITECTURE.md)
 

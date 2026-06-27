@@ -23,6 +23,7 @@ flowchart LR
 | `readsb` | Decodes ADS-B from SDR; writes `/run/readsb/aircraft.json` |
 | `tar1090` | Serves live map and JSON at `/tar1090/data/*` |
 | `airplanes-feed` / `airplanes-mlat` | Optional upstream to airplanes.live |
+| `adsb-docker` / `adsb-setup` | adsb.im Docker stack and web UI (`FEED_PROFILE=adsbim`) |
 | `dashboard/` | Static HTML/JS UI + `gen-status.py` |
 | `feeder-api` | Local HTTP API on `127.0.0.1:8765`, proxied at `/dashboard/api/` |
 | `muninn/` | WDGoWars uploader (submodule) |
@@ -49,7 +50,7 @@ flowchart LR
 
 | Path | Purpose |
 |------|---------|
-| `feeder.env` | Install paths (not committed) |
+| `feeder.env` | Install paths and `FEED_PROFILE` (`airplanes`, `adsbim`, `readsb-only`) |
 | `dashboard/status.json` | Aggregated status for UI |
 | `dashboard/history.json` | 24h chart data |
 | `logs/upload.log` | Muninn upload log |

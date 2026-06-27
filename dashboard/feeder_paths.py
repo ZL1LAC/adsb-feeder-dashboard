@@ -31,8 +31,13 @@ if os.environ.get("FEEDER_REPO_ROOT"):
 if os.environ.get("FEEDER_MUNINN_ROOT"):
     MUNINN_ROOT = Path(os.environ["FEEDER_MUNINN_ROOT"])
 
+from feeder_profile import FEED_PROFILE  # noqa: E402
+
+_default_location = (
+    "/opt/adsb/config/.env" if FEED_PROFILE == "adsbim" else "/etc/default/airplanes"
+)
 AIRCRAFT_JSON = Path(os.environ.get("FEEDER_AIRCRAFT_JSON", "/run/readsb/aircraft.json"))
-LOCATION_FILE = Path(os.environ.get("FEEDER_LOCATION_FILE", "/etc/default/airplanes"))
+LOCATION_FILE = Path(os.environ.get("FEEDER_LOCATION_FILE", _default_location))
 READSB_DEFAULT = Path(os.environ.get("FEEDER_READSB_DEFAULT", "/etc/default/readsb"))
 STATS_JSON = Path(os.environ.get("FEEDER_STATS_JSON", "/run/readsb/stats.json"))
 LOG_DIR = REPO_ROOT / "logs"

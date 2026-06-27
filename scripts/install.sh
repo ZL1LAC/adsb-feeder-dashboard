@@ -20,7 +20,7 @@ Usage: $0 [options]
 
 Options:
   --user NAME          Feeder Linux user (default: current user)
-  --profile PROFILE    airplanes | readsb-only  (default: airplanes)
+  --profile PROFILE    airplanes | adsbim | readsb-only  (default: airplanes)
   --skip-muninn        Skip Muninn/WDGoWars setup
   --skip-dashboard     Skip dashboard systemd/lighttpd install
   --install-airplanes  Run airplanes.live feed installer (requires sudo)
@@ -69,6 +69,11 @@ if [[ "$FEED_PROFILE" == "airplanes" ]]; then
   if ! systemctl is-active airplanes-feed &>/dev/null; then
     echo "  Tip: sudo ./scripts/install-airplanes.sh"
   fi
+elif [[ "$FEED_PROFILE" == "adsbim" ]]; then
+  echo "Profile: adsb.im (ensure adsb-docker is running)"
+  if ! systemctl is-active adsb-docker &>/dev/null; then
+    echo "  Tip: install adsb.im first — see docs/INSTALL-adsbim.md"
+  fi
 else
   echo "Profile: readsb-only (airplanes.live feed optional)"
 fi
@@ -85,4 +90,4 @@ echo
 echo "Next steps:"
 echo "  1. ./scripts/go-live.sh <WDGoWars-api-key>   # enable WDGoWars uploads"
 echo "  2. Open http://$(hostname -I 2>/dev/null | awk '{print $1}' || echo localhost)/dashboard/"
-echo "  Docs: docs/INSTALL-airplanes-live.md or docs/INSTALL-readsb-only.md"
+echo "  Docs: docs/INSTALL-airplanes-live.md, docs/INSTALL-adsbim.md, or docs/INSTALL-readsb-only.md"

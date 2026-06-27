@@ -15,6 +15,7 @@ from feeder_paths import (
     UPLOAD_HISTORY as HISTORY,
     UPLOAD_LOG as LOG,
 )
+from feeder_profile import FEED_PROFILE, apply_location_line, build_feeds, build_services, link_info
 
 OUT = Path(__file__).resolve().parent / "status.json"
 HISTORY_LOG = Path(__file__).resolve().parent / "history.jsonl"
@@ -71,14 +72,9 @@ def read_location() -> dict:
         return loc
     for line in AIRPLANES.read_text().splitlines():
         line = line.strip()
-        if line.startswith("LATITUDE="):
-            loc["lat"] = line.split("=", 1)[1].strip('"')
-        elif line.startswith("LONGITUDE="):
-            loc["lon"] = line.split("=", 1)[1].strip('"')
-        elif line.startswith("ALTITUDE="):
-            loc["alt"] = line.split("=", 1)[1].strip('"')
-        elif line.startswith("USER="):
-            loc["user"] = line.split("=", 1)[1].strip('"')
+        if not line or line.startswith("#"):
+            continue
+        apply_location_line(line, loc)
     return loc
 
 
@@ -282,7 +278,6 @@ def read_watch_state() -> dict:
 
 
 def main() -> None:
-    feeds = feed_connected()
     stats = read_stats()
     signal = stats.get("signal")
     noise = stats.get("noise")
@@ -309,13 +304,9 @@ def main() -> None:
     payload = {
         "updated": datetime.now(timezone.utc).isoformat(),
         "hostname": run("hostname") or "pi",
-        "services": {
-            "readsb": service_state("readsb"),
-            "tar1090": service_state("tar1090"),
-            "airplanes_feed": service_state("airplanes-feed"),
-            "airplanes_mlat": service_state("airplanes-mlat"),
-            "muninn": service_state("muninn-upload.timer", user=True),
-        },
+        "profile": FEED_PROFILE,
+        "links": link_info(),
+        "services": build_services(service_state),
         "uptime": {
             "readsb": service_uptime("readsb"),
             "host": run("uptime", "-p"),
@@ -327,10 +318,7 @@ def main() -> None:
             "snr": snr,
             "max_distance": max_dist,
         },
-        "feeds": {
-            "airplanes_live": feeds["beast"],
-            "airplanes_mlat": feeds["mlat"],
-        },
+        "feeds": build_feeds(feed_connected, service_state),
         "sdr": sdr_info(),
         "sdr_ok": sdr_present(),
         "watch": read_watch_state(),
