@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily ADS-B summary at 08:00 local
+# managed-by-feeder-dashboard
+
+[Timer]
+OnCalendar=*-*-* 08:00:00
+Persistent=true
+AccuracySec=1min
+Unit=feeder-daily-summary.service
+
+[Install]
+WantedBy=timers.target

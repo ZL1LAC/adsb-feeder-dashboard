@@ -1,0 +1,15 @@
+services:
+  gotify:
+    image: gotify/server:latest
+    container_name: gotify
+    restart: unless-stopped
+    ports:
+      - "8090:80"   # host:container — change 8090 if this port is also taken
+    volumes:
+      - gotify-data:/app/data
+    environment:
+      GOTIFY_DEFAULTUSER_NAME: admin
+      GOTIFY_DEFAULTUSER_PASS: admin
+
+volumes:
+  gotify-data:

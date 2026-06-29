@@ -11,6 +11,9 @@ Built for **readsb + tar1090** stacks, with first-class support for [airplanes.l
 - 24h SVG sparkline history (aircraft, SNR, max range)
 - WDGoWars score card, upload timeline, configurable upload interval
 - Operations: restart services, gain presets, manual push
+- **Gotify alerts**: feeder down, watchlist, overhead passes, squawk codes (7500/7600/7700 + custom)
+- **Flight log analytics**: 30-day SQLite history, dashboard stats, CLI queries
+- **Settings page** (`/dashboard/settings.html`): Gotify, squawk alerts, watchlist, station location, gain, Muninn interval
 - SDR auto-recovery watcher
 - Mobile-friendly layout + PWA manifest
 
@@ -72,6 +75,10 @@ cp feeder.env.example feeder.env
 ```
 
 Install scripts create `feeder.env` automatically on first run.
+
+For push notifications, run [Gotify](https://gotify.net/) (see `scripts/install-gotify.sh` or use an existing server), create an app, and paste the app token in **Dashboard → Settings**.
+
+Squawk alerts: emergency codes 7500/7600/7700 are on by default; add custom codes in Settings (comma-separated).
 
 ## Logs
 

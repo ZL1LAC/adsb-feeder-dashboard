@@ -1,0 +1,9 @@
+[Unit]
+Description=Log aircraft sightings to SQLite
+# managed-by-feeder-dashboard
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 @REPO_ROOT@/dashboard/flight-log.py
+Environment=FEEDER_REPO_ROOT=@REPO_ROOT@
+EnvironmentFile=-@REPO_ROOT@/feeder.env

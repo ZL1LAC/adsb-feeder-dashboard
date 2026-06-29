@@ -1,9 +1,19 @@
 const REFRESH_MS = 5000;
 const STATUS_URL = "/dashboard/status.json";
 const HISTORY_URL = "/dashboard/history.json";
+const HISTORY_HOURLY_URL = "/dashboard/history-hourly.json";
+const FLIGHT_STATS_URL = "/dashboard/api/flight-stats";
 const WHOAMI_TTL_MS = 5 * 60 * 1000;
 
+const EMERGENCY_SQUAWKS = {
+  "7500": "Hijack",
+  "7600": "Radio failure",
+  "7700": "Emergency",
+};
+
 let whoamiCache = { at: 0, data: null };
+let watchlistCache = { at: 0, data: { callsigns: [], hex: [] } };
+let historyRange = "24h";
 let aircraftState = {
   list: [],
   loc: null,
@@ -173,7 +183,157 @@ function sortAircraft(list, key, asc, loc) {
   });
 }
 
-function renderAircraftTable() {
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function squawkInfo(a) {
+  const sq = String(a.squawk || "").trim();
+  if (!sq || !EMERGENCY_SQUAWKS[sq]) return null;
+  return { code: sq, label: EMERGENCY_SQUAWKS[sq] };
+}
+
+function fmtSquawk(a) {
+  const sq = String(a.squawk || "").trim();
+  if (!sq) return "—";
+  const info = squawkInfo(a);
+  if (info) {
+    return `<span class="squawk-code emergency" title="${escapeHtml(info.label)}">${sq}</span>`;
+  }
+  return escapeHtml(sq);
+}
+
+function trackerHexLink(hex) {
+  const h = (hex || "").toLowerCase();
+  if (!h) return "—";
+  const url = `https://globe.adsbexchange.com/?icao=${encodeURIComponent(h)}`;
+  return `<a class="tracker-link" href="${url}" target="_blank" rel="noopener">${escapeHtml(h.toUpperCase())}<span class="ext-icon" aria-hidden="true">↗</span></a>`;
+}
+
+function trackerFlightLink(flight) {
+  const f = (flight || "").trim();
+  if (!f) return "—";
+  const url = `https://www.flightaware.com/live/flight/${encodeURIComponent(f)}`;
+  return `<a class="tracker-link" href="${url}" target="_blank" rel="noopener">${escapeHtml(f)}<span class="ext-icon" aria-hidden="true">↗</span></a>`;
+}
+
+async function loadWatchlist() {
+  const now = Date.now();
+  if (watchlistCache.at && now - watchlistCache.at < 60000) {
+    return watchlistCache.data;
+  }
+  try {
+    const data = await fetchJson(WATCHLIST_URL);
+    watchlistCache = {
+      at: now,
+      data: {
+        callsigns: (data.callsigns || []).map((c) => String(c).trim().toUpperCase()),
+        hex: (data.hex || []).map((h) => String(h).trim().toLowerCase()),
+      },
+    };
+  } catch {
+    watchlistCache = { at: now, data: { callsigns: [], hex: [] } };
+  }
+  return watchlistCache.data;
+}
+
+function isWatchlistHit(a, watchlist) {
+  if (!watchlist) return false;
+  const hex = (a.hex || "").toLowerCase();
+  const flight = (a.flight || "").trim().toUpperCase();
+  if (hex && watchlist.hex.includes(hex)) return true;
+  if (flight && watchlist.callsigns.some((c) => flight.startsWith(c) || flight.includes(c))) {
+    return true;
+  }
+  return false;
+}
+
+function nearestAircraft(list, loc) {
+  let best = null;
+  let bestDist = Infinity;
+  for (const a of list) {
+    const d = aircraftDistance(a, loc);
+    if (d != null && d < bestDist) {
+      bestDist = d;
+      best = a;
+    }
+  }
+  return best ? { aircraft: best, distanceM: bestDist } : null;
+}
+
+function renderNearest(nearest) {
+  const el = $("nearest-body");
+  if (!el) return;
+  if (!nearest) {
+    el.innerHTML = '<p class="empty">No positioned aircraft</p>';
+    return;
+  }
+  const { aircraft: a, distanceM } = nearest;
+  const flight = (a.flight || "").trim() || "—";
+  const hex = (a.hex || "").toUpperCase();
+  const track = a.track != null ? `${Number(a.track).toFixed(0)}°` : "—";
+  const gs = a.gs != null ? `${Number(a.gs).toFixed(0)} kt` : "—";
+  const mapUrl =
+    a.lat != null && a.lon != null
+      ? `/tar1090/?lat=${a.lat}&lon=${a.lon}&zoom=11`
+      : "/tar1090/";
+  el.innerHTML = `
+    <div class="nearest-grid">
+      <div class="nearest-stat">
+        <span class="nearest-value">${escapeHtml(flight)}</span>
+        <span class="nearest-label">Flight</span>
+      </div>
+      <div class="nearest-stat">
+        <span class="nearest-value">${escapeHtml(hex)}</span>
+        <span class="nearest-label">ICAO</span>
+      </div>
+      <div class="nearest-stat">
+        <span class="nearest-value">${(distanceM / 1000).toFixed(1)} km</span>
+        <span class="nearest-label">Distance</span>
+      </div>
+      <div class="nearest-stat">
+        <span class="nearest-value">${fmtAlt(a)}</span>
+        <span class="nearest-label">Altitude</span>
+      </div>
+      <div class="nearest-stat">
+        <span class="nearest-value">${track}</span>
+        <span class="nearest-label">Track</span>
+      </div>
+      <div class="nearest-stat">
+        <span class="nearest-value">${gs}</span>
+        <span class="nearest-label">Speed</span>
+      </div>
+    </div>
+    <p class="meta nearest-meta"><a href="${mapUrl}" target="_blank">View on map</a></p>`;
+}
+
+function renderSquawkBanner(emergencies) {
+  const card = $("squawk-banner");
+  const body = $("squawk-banner-body");
+  if (!card || !body) return;
+  if (!emergencies.length) {
+    card.classList.add("hidden");
+    body.innerHTML = "";
+    return;
+  }
+  card.classList.remove("hidden");
+  body.innerHTML = emergencies
+    .map((e) => {
+      const flight = (e.flight || "").trim() || e.hex?.toUpperCase() || "Unknown";
+      return `<div class="squawk-alert-item">
+        <span class="squawk-alert-code">${e.squawk}</span>
+        <span class="squawk-alert-label">${escapeHtml(e.label)}</span>
+        <span class="squawk-alert-flight">${escapeHtml(flight)}</span>
+      </div>`;
+    })
+    .join("");
+}
+
+function renderAircraftTable(watchlist) {
   const { list, loc, query, sortKey, sortAsc } = aircraftState;
   const filtered = list.filter((a) => matchesSearch(a, query));
   const sorted = sortAircraft(filtered, sortKey, sortAsc, loc);
@@ -184,7 +344,7 @@ function renderAircraftTable() {
   if (!sorted.length) {
     setHtml(
       "aircraft-rows",
-      `<tr><td colspan="10" class="empty">${query ? "No matches" : "No aircraft right now"}</td></tr>`
+      `<tr><td colspan="11" class="empty">${query ? "No matches" : "No aircraft right now"}</td></tr>`
     );
     return;
   }
@@ -192,15 +352,25 @@ function renderAircraftTable() {
     "aircraft-rows",
     sorted
       .map((a) => {
-        const flight = (a.flight || "").trim() || "—";
+        const flightRaw = (a.flight || "").trim();
         const gs = a.gs != null ? `${a.gs.toFixed ? a.gs.toFixed(0) : a.gs} kt` : "—";
         const distM = aircraftDistance(a, loc);
         const dist = distM != null ? `${(distM / 1000).toFixed(0)} km` : "—";
         const rssi = a.rssi != null ? a.rssi.toFixed(1) : "—";
         const seen = a.seen != null ? `${a.seen.toFixed(0)}s` : "—";
-        return `<tr>
-        <td>${(a.hex || "").toUpperCase()}</td>
-        <td>${flight}</td>
+        const emergency = squawkInfo(a);
+        const watchHit = isWatchlistHit(a, watchlist);
+        const rowCls = [
+          emergency ? "squawk-emergency" : "",
+          watchHit ? "watchlist-hit" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        const watchBadge = watchHit ? '<span class="badge watchlist">Watch</span> ' : "";
+        return `<tr class="${rowCls}">
+        <td>${trackerHexLink(a.hex)}</td>
+        <td>${watchBadge}${trackerFlightLink(flightRaw)}</td>
+        <td class="col-hide-sm">${fmtSquawk(a)}</td>
         <td>${aircraftType(a)}</td>
         <td class="col-hide-sm">${fmtCoord(a.lat)}</td>
         <td class="col-hide-sm">${fmtCoord(a.lon)}</td>
@@ -281,7 +451,63 @@ function renderHeaderLinks(status) {
   }
 }
 
-function renderHealthBanner(status) {
+function fmtBytes(bytes) {
+  if (bytes == null || bytes < 0) return "—";
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function renderFlightStats(data) {
+  const body = $("flight-stats-body");
+  const meta = $("flight-log-meta");
+  if (!body) return;
+
+  if (!data?.ok) {
+    body.innerHTML = `<p class="empty">${escapeHtml(data?.error || "Flight log unavailable")}</p>`;
+    if (meta) meta.textContent = "";
+    return;
+  }
+
+  const top = data.top_callsigns_7d || [];
+  const topHtml = top.length
+    ? `<ul class="flight-top-list">${top
+        .map(
+          (row) =>
+            `<li><span class="flight-top-flight">${escapeHtml(row.flight)}</span>` +
+            `<span class="flight-top-count">${row.count.toLocaleString()}</span></li>`
+        )
+        .join("")}</ul>`
+    : '<p class="empty">No callsign data yet</p>';
+
+  body.innerHTML = `
+    <div class="stat">
+      <span class="stat-value">${data.unique_hex_24h?.toLocaleString() ?? "—"}</span>
+      <span class="stat-label">Unique ICAO (24h)</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">${data.unique_hex_7d?.toLocaleString() ?? "—"}</span>
+      <span class="stat-label">Unique ICAO (7d)</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">${data.sightings_today?.toLocaleString() ?? "—"}</span>
+      <span class="stat-label">Sightings today</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">${fmtBytes(data.db_size_bytes)}</span>
+      <span class="stat-label">Log size</span>
+    </div>
+    <div class="stat" style="grid-column: 1 / -1">
+      <span class="stat-label" style="margin-bottom:0.35rem;display:block">Top callsigns (7d)</span>
+      ${topHtml}
+    </div>`;
+
+  if (meta) {
+    const oldest = data.oldest_record ? fmtTime(data.oldest_record) : "—";
+    meta.textContent = `${data.total_rows?.toLocaleString() ?? 0} rows · oldest ${oldest}`;
+  }
+}
+
+function renderHealthBanner(status, watchlistHits = 0) {
   const el = $("health-banner");
   if (!el) return;
   const services = status.services || {};
@@ -296,12 +522,18 @@ function renderHealthBanner(status) {
   const muninnTimer = (services.muninn || "").toLowerCase() === "active";
   const wdgOk = muninn.last_ok !== false && muninnTimer;
 
-  el.innerHTML = [
+  const chips = [
     healthChip("SDR", sdrOk, false, "feeds-card"),
     healthChip("readsb", readsbOk, readsbWarn, "services-card"),
     healthChip("Feeds", feedsOk, false, "feeds-card"),
     healthChip("WDGoWars", wdgOk, muninn.last_ok == null && muninnTimer, "wdg-card"),
-  ].join("");
+  ];
+  if (watchlistHits > 0) {
+    chips.push(
+      `<button type="button" class="health-chip warn" data-scroll="aircraft-card" title="Watchlist matches">${watchlistHits} watch</button>`
+    );
+  }
+  el.innerHTML = chips.join("");
 }
 
 function renderWhoami(data) {
@@ -419,19 +651,31 @@ async function apiPost(path, body) {
 
 async function refresh() {
   try {
-    const [aircraft, stats, status, receiver] = await Promise.all([
+    const [aircraft, stats, status, receiver, watchlist] = await Promise.all([
       fetchJson("/tar1090/data/aircraft.json"),
       fetchJson("/tar1090/data/stats.json"),
       fetchJson(STATUS_URL),
       fetchJson("/tar1090/data/receiver.json").catch(() => ({})),
+      loadWatchlist(),
     ]);
 
     const list = aircraft.aircraft || [];
     const positioned = list.filter((a) => a.lat != null && a.lon != null);
     const reception = status.reception || {};
+    const loc = status.location || {};
 
-    renderHealthBanner(status);
+    const watchlistHits = list.filter((a) => isWatchlistHit(a, watchlist)).length;
+    const emergencies = list
+      .map((a) => {
+        const info = squawkInfo(a);
+        return info ? { ...a, squawk: info.code, label: info.label } : null;
+      })
+      .filter(Boolean);
+
+    renderHealthBanner(status, watchlistHits);
     renderHeaderLinks(status);
+    renderSquawkBanner(emergencies);
+    renderNearest(nearestAircraft(list, loc));
 
     setText("aircraft-total", list.length);
     setText("aircraft-positioned", positioned.length);
@@ -463,9 +707,15 @@ async function refresh() {
 
     const uptime = fmtUptime(status.uptime?.readsb);
     const version = receiver.version ? ` · ${receiver.version}` : "";
-    setText("readsb-meta", [uptime, version].filter(Boolean).join(""));
+    const locMatch = status.readsb_location?.matches_airplanes;
+    const locNote =
+      locMatch === false
+        ? " · readsb location mismatch — run apply-readsb-location.sh"
+        : locMatch === true
+          ? " · readsb location OK"
+          : "";
+    setText("readsb-meta", [uptime, version, locNote].filter(Boolean).join(""));
 
-    const loc = status.location || {};
     const locStr =
       loc.lat && loc.lon ? `${loc.lat}, ${loc.lon}${loc.alt ? ` · ${loc.alt}` : ""}` : "";
     setText(
@@ -484,7 +734,7 @@ async function refresh() {
 
     aircraftState.list = list;
     aircraftState.loc = loc;
-    renderAircraftTable();
+    renderAircraftTable(watchlist);
     updateSortHeaders();
 
     const muninn = status.muninn || {};
@@ -507,14 +757,22 @@ async function refresh() {
     loadWhoami();
 
     try {
-      const history = await fetchJson(HISTORY_URL);
+      const historyUrl = historyRange === "7d" ? HISTORY_HOURLY_URL : HISTORY_URL;
+      const history = await fetchJson(historyUrl);
       if (typeof renderHistoryCharts === "function") {
-        renderHistoryCharts(history);
+        renderHistoryCharts(history, historyRange);
       }
     } catch {
       if (typeof renderHistoryCharts === "function") {
-        renderHistoryCharts([]);
+        renderHistoryCharts([], historyRange);
       }
+    }
+
+    try {
+      const flightStats = await fetchJson(FLIGHT_STATS_URL);
+      renderFlightStats(flightStats);
+    } catch {
+      renderFlightStats({ ok: false, error: "Could not load flight stats" });
     }
 
     const logLines = filterLogLines(status.muninn_log);
@@ -677,7 +935,17 @@ function init() {
 
   $("aircraft-search")?.addEventListener("input", (e) => {
     aircraftState.query = e.target.value.trim();
-    renderAircraftTable();
+    renderAircraftTable(watchlistCache.data);
+  });
+
+  document.querySelectorAll(".history-range-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      historyRange = btn.dataset.range || "24h";
+      document.querySelectorAll(".history-range-btn").forEach((b) => {
+        b.classList.toggle("active", b === btn);
+      });
+      refresh();
+    });
   });
 
   document.querySelectorAll("th.sortable").forEach((th) => {
@@ -689,7 +957,7 @@ function init() {
         aircraftState.sortKey = key;
         aircraftState.sortAsc = key === "flight" || key === "hex";
       }
-      renderAircraftTable();
+      renderAircraftTable(watchlistCache.data);
       updateSortHeaders();
     });
   });

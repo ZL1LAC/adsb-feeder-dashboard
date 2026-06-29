@@ -20,6 +20,8 @@ from feeder_profile import FEED_PROFILE, apply_location_line, build_feeds, build
 OUT = Path(__file__).resolve().parent / "status.json"
 HISTORY_LOG = Path(__file__).resolve().parent / "history.jsonl"
 HISTORY_CHART = Path(__file__).resolve().parent / "history.json"
+HISTORY_HOURLY_LOG = Path(__file__).resolve().parent / "history-hourly.jsonl"
+HISTORY_HOURLY_CHART = Path(__file__).resolve().parent / "history-hourly.json"
 WATCH_STATE = Path(__file__).resolve().parent / "watch-state.json"
 AIRPLANES = LOCATION_FILE
 
@@ -238,6 +240,31 @@ def read_aircraft_counts() -> dict:
         return {"total": 0, "positioned": 0, "messages": 0}
 
 
+def read_readsb_location() -> dict:
+    loc = {"lat": None, "lon": None, "alt": None}
+    if not READSB_DEFAULT.exists():
+        return loc
+    text = READSB_DEFAULT.read_text()
+    for flag, key in (("--lat", "lat"), ("--lon", "lon"), ("--alt", "alt")):
+        m = re.search(rf"{re.escape(flag)}\s+(\S+)", text)
+        if m:
+            loc[key] = m.group(1).strip('"').strip("'")
+    return loc
+
+
+def locations_match(airplanes: dict, readsb: dict) -> bool | None:
+    if not airplanes.get("lat") or not airplanes.get("lon"):
+        return None
+    if not readsb.get("lat") or not readsb.get("lon"):
+        return False
+    try:
+        lat_ok = abs(float(airplanes["lat"]) - float(readsb["lat"])) < 0.0001
+        lon_ok = abs(float(airplanes["lon"]) - float(readsb["lon"])) < 0.0001
+        return lat_ok and lon_ok
+    except (TypeError, ValueError):
+        return False
+
+
 def append_history(snapshot: dict) -> None:
     now = datetime.now(timezone.utc)
     snapshot["t"] = now.isoformat()
@@ -264,6 +291,63 @@ def append_history(snapshot: dict) -> None:
         rows = rows[-2880:]
     HISTORY_LOG.write_text("\n".join(json.dumps(r) for r in rows) + ("\n" if rows else ""), encoding="utf-8")
     HISTORY_CHART.write_text(json.dumps(rows, indent=2), encoding="utf-8")
+    append_hourly_rollup(snapshot, now)
+
+
+def append_hourly_rollup(snapshot: dict, now: datetime) -> None:
+    hour_start = now.replace(minute=0, second=0, microsecond=0)
+    hour_key = hour_start.isoformat()
+    cutoff = now.timestamp() - 7 * 86400
+
+    rows: list[dict] = []
+    if HISTORY_HOURLY_LOG.exists():
+        try:
+            for line in HISTORY_HOURLY_LOG.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                try:
+                    ts = datetime.fromisoformat(row["t"].replace("Z", "+00:00")).timestamp()
+                except (KeyError, ValueError):
+                    continue
+                if ts >= cutoff:
+                    rows.append(row)
+        except OSError:
+            rows = []
+
+    current = None
+    for row in rows:
+        if row.get("t") == hour_key:
+            current = row
+            break
+
+    if current is None:
+        current = {
+            "t": hour_key,
+            "aircraft_total": 0,
+            "aircraft_positioned": 0,
+            "messages": 0,
+            "snr": None,
+            "max_distance": 0,
+        }
+        rows.append(current)
+
+    current["aircraft_total"] = max(int(current.get("aircraft_total") or 0), int(snapshot.get("aircraft_total") or 0))
+    current["aircraft_positioned"] = max(
+        int(current.get("aircraft_positioned") or 0), int(snapshot.get("aircraft_positioned") or 0)
+    )
+    current["messages"] = max(int(current.get("messages") or 0), int(snapshot.get("messages") or 0))
+    snr = snapshot.get("snr")
+    if snr is not None:
+        prev = current.get("snr")
+        current["snr"] = max(float(prev), float(snr)) if prev is not None else float(snr)
+    dist = snapshot.get("max_distance")
+    if dist is not None:
+        current["max_distance"] = max(float(current.get("max_distance") or 0), float(dist))
+
+    rows.sort(key=lambda r: r.get("t", ""))
+    HISTORY_HOURLY_LOG.write_text("\n".join(json.dumps(r) for r in rows) + ("\n" if rows else ""), encoding="utf-8")
+    HISTORY_HOURLY_CHART.write_text(json.dumps(rows, indent=2), encoding="utf-8")
 
 
 def read_watch_state() -> dict:
@@ -288,6 +372,8 @@ def main() -> None:
     ac = read_aircraft_counts()
     muninn_meta = parse_muninn_meta()
     loc = read_location()
+    readsb_loc = read_readsb_location()
+    loc_match = locations_match(loc, readsb_loc)
     max_dist = stats.get("max_distance")
     if not max_dist:
         max_dist = max_distance_from_aircraft(loc)
@@ -323,6 +409,7 @@ def main() -> None:
         "sdr_ok": sdr_present(),
         "watch": read_watch_state(),
         "location": loc,
+        "readsb_location": {**readsb_loc, "matches_airplanes": loc_match},
         "muninn": muninn_meta,
         "muninn_log": muninn_log_tail(),
     }

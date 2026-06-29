@@ -1,0 +1,9 @@
+[Unit]
+Description=ADS-B feeder Gotify alerts
+# managed-by-feeder-dashboard
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 @REPO_ROOT@/dashboard/feeder-alerts.py
+Environment=FEEDER_REPO_ROOT=@REPO_ROOT@
+EnvironmentFile=-@REPO_ROOT@/feeder.env

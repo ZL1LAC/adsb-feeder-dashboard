@@ -1,0 +1,12 @@
+[Unit]
+Description=Log aircraft sightings every 30s
+# managed-by-feeder-dashboard
+
+[Timer]
+OnBootSec=60s
+OnUnitActiveSec=30s
+AccuracySec=5s
+Unit=feeder-flight-log.service
+
+[Install]
+WantedBy=timers.target

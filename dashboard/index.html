@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
   <header class="header">
@@ -20,6 +20,7 @@
       <div class="health-banner" id="health-banner" aria-label="System health"></div>
     </div>
     <div class="header-actions">
+      <a class="btn btn-ghost" href="/dashboard/settings.html">Settings</a>
       <a class="btn" href="/tar1090/" target="_blank">Live map</a>
       <a class="btn btn-ghost" id="adsbim-local-link" href="#" target="_blank" rel="noopener" hidden>adsb.im setup</a>
       <a class="btn btn-ghost" id="aggregator-link" href="https://airplanes.live/myfeed/" target="_blank" rel="noopener">airplanes.live</a>
@@ -58,6 +59,18 @@
       </div>
       <div class="snr-health" id="snr-health"></div>
       <p class="meta" id="readsb-meta"></p>
+    </section>
+
+    <section class="card card-squawk order-squawk hidden" id="squawk-banner" aria-live="assertive">
+      <h2>Emergency squawk</h2>
+      <div id="squawk-banner-body" class="squawk-banner-body"></div>
+    </section>
+
+    <section class="card order-nearest" id="nearest-card">
+      <h2>Nearest aircraft</h2>
+      <div id="nearest-body" class="nearest-body">
+        <p class="empty">No positioned aircraft</p>
+      </div>
     </section>
 
     <section class="card card-compact order-wdg" id="wdg-card">
@@ -118,6 +131,7 @@
             <tr>
               <th class="sortable" data-sort="hex">ICAO</th>
               <th class="sortable" data-sort="flight">Flight</th>
+              <th class="col-hide-sm">Squawk</th>
               <th>Type</th>
               <th class="col-hide-sm">Lat</th>
               <th class="col-hide-sm">Lon</th>
@@ -129,15 +143,29 @@
             </tr>
           </thead>
           <tbody id="aircraft-rows">
-            <tr><td colspan="10" class="empty">Waiting for data…</td></tr>
+            <tr><td colspan="11" class="empty">Waiting for data…</td></tr>
           </tbody>
         </table>
       </div>
     </section>
 
     <section class="card card-wide order-history" id="history-card">
-      <h2>24h history</h2>
+      <div class="section-head">
+        <h2>History</h2>
+        <div class="history-toggle" role="group" aria-label="History range">
+          <button type="button" class="btn btn-ghost btn-sm history-range-btn active" data-range="24h">24h</button>
+          <button type="button" class="btn btn-ghost btn-sm history-range-btn" data-range="7d">7d</button>
+        </div>
+      </div>
       <div class="history-grid" id="history-charts"></div>
+    </section>
+
+    <section class="card card-wide order-flight-log" id="flight-log-card">
+      <h2>Flight log</h2>
+      <div class="flight-stats-grid" id="flight-stats-body">
+        <p class="empty">Loading flight log stats…</p>
+      </div>
+      <p class="meta" id="flight-log-meta"></p>
     </section>
 
     <section class="card card-wide order-map collapsible" id="map-card">
@@ -197,7 +225,7 @@
   <footer class="footer">
     <span id="updated">Refreshing…</span>
   </footer>
-  <script src="charts.js?v=2"></script>
+  <script src="charts.js?v=3"></script>
   <script src="app.js?v=10"></script>
 </body>
 </html>

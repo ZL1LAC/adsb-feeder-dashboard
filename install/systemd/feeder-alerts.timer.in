@@ -1,0 +1,12 @@
+[Unit]
+Description=Check ADS-B alerts every 60s
+# managed-by-feeder-dashboard
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=60s
+AccuracySec=10s
+Unit=feeder-alerts.service
+
+[Install]
+WantedBy=timers.target

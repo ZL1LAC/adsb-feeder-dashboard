@@ -8,6 +8,10 @@ venv/
 dashboard/status.json
 dashboard/history.json
 dashboard/history.jsonl
+dashboard/history-hourly.json
+dashboard/history-hourly.jsonl
+dashboard/alert-state.json
+dashboard/watchlist.json
 dashboard/watch-state.json
 logs/
 feeder.env

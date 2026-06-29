@@ -54,7 +54,7 @@ if [[ -n "${FEED_PROFILE:-}" ]]; then
 fi
 
 echo "Installing systemd user units..."
-for unit in feeder-api.service feeder-dashboard-update.service feeder-dashboard.timer feeder-watch.service feeder-watch.timer; do
+for unit in feeder-api.service feeder-dashboard-update.service feeder-dashboard.timer feeder-watch.service feeder-watch.timer feeder-alerts.service feeder-alerts.timer feeder-flight-log.service feeder-flight-log.timer feeder-daily-summary.service feeder-daily-summary.timer; do
   subst "$INSTALL_DIR/systemd/${unit}.in" "$USER_SYSTEMD/${unit}"
 done
 
@@ -62,6 +62,9 @@ systemctl --user daemon-reload
 systemctl --user enable --now feeder-api.service
 systemctl --user enable --now feeder-dashboard.timer
 systemctl --user enable --now feeder-watch.timer
+systemctl --user enable --now feeder-alerts.timer
+systemctl --user enable --now feeder-flight-log.timer
+systemctl --user enable --now feeder-daily-summary.timer
 
 if command -v lighttpd >/dev/null 2>&1; then
   echo "Installing lighttpd dashboard config..."

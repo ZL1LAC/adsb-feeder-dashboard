@@ -65,21 +65,29 @@ function statRange(rows, key, opts = {}) {
   return `${fmtStat(min, unit)}–${fmtStat(max, unit)}`;
 }
 
-function timeAxis(rows) {
+function timeAxis(rows, range = "24h") {
   if (!rows.length) return "";
   const first = rows[0]?.t;
   const last = rows[rows.length - 1]?.t;
-  if (!first || !last) return '<div class="chart-axis"><span>24h ago</span><span>now</span></div>';
+  if (!first || !last) {
+    const label = range === "7d" ? "7d ago" : "24h ago";
+    return `<div class="chart-axis"><span>${label}</span><span>now</span></div>`;
+  }
   try {
-    const t0 = new Date(first).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    const t1 = new Date(last).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const fmt =
+      range === "7d"
+        ? (d) => d.toLocaleDateString([], { month: "short", day: "numeric" })
+        : (d) => d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const t0 = fmt(new Date(first));
+    const t1 = fmt(new Date(last));
     return `<div class="chart-axis"><span>${t0}</span><span>now (${t1})</span></div>`;
   } catch {
-    return '<div class="chart-axis"><span>24h ago</span><span>now</span></div>';
+    const label = range === "7d" ? "7d ago" : "24h ago";
+    return `<div class="chart-axis"><span>${label}</span><span>now</span></div>`;
   }
 }
 
-function renderHistoryCharts(rows) {
+function renderHistoryCharts(rows, range = "24h") {
   const el = document.getElementById("history-charts");
   if (!el) return;
   const data = downsample(rows || []);
@@ -97,16 +105,16 @@ function renderHistoryCharts(rows) {
   ];
   const blocks = charts
     .map((c) => {
-      const range = statRange(data, c.key, c);
-      const rangeLine = range ? `<div class="chart-range">${range}</div>` : "";
+      const rangeLine = statRange(data, c.key, c);
+      const rangeHtml = rangeLine ? `<div class="chart-range">${rangeLine}</div>` : "";
       return `<div class="chart-block">
         <div class="chart-label">${c.label}</div>
-        ${rangeLine}
+        ${rangeHtml}
         ${sparklineSvg(data, c.key, { label: c.label, color: c.color, unit: c.unit, transform: c.transform })}
       </div>`;
     })
     .join("");
-  el.innerHTML = blocks + timeAxis(data);
+  el.innerHTML = blocks + timeAxis(data, range);
 }
 
 window.renderHistoryCharts = renderHistoryCharts;

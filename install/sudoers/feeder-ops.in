@@ -6,3 +6,4 @@
 @FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart adsb-docker
 @FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart adsb-setup
 @FEEDER_USER@ ALL=(ALL) NOPASSWD: /usr/local/bin/readsb-gain *
+@FEEDER_USER@ ALL=(ALL) NOPASSWD: @REPO_ROOT@/scripts/set-station-location.sh *

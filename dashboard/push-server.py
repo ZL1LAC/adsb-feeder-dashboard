@@ -4,22 +4,29 @@ import json
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 
 from feeder_paths import (
     GEN_STATUS as GEN,
     MUNINN_PY,
     SCHEDULE_SH,
+    SET_LOCATION,
+    STATUS_JSON,
     UPLOAD_HISTORY as HISTORY,
     UPLOAD_READY,
     UPLOAD_SCRIPT as UPLOAD,
     VENV_PYTHON as MUNINN,
 )
 from feeder_profile import restart_units
+from flight_stats import get_flight_stats
+from notify import check_gotify, send_alert_with
+from settings_config import get_settings, save_settings, validate_alerts
 
 HOST, PORT = "127.0.0.1", 8765
+FLIGHT_STATS_CACHE_TTL_S = 60
+_flight_stats_cache: dict = {"at": 0.0, "data": None}
 
 GAIN_RE = re.compile(r"^[0-9]+(\.[0-9]+)?$|^auto$")
 WHOAMI_USER = re.compile(r"user=(\S+)")
@@ -81,11 +88,27 @@ def parse_whoami(text: str) -> dict:
     return result
 
 
+def cached_flight_stats() -> dict:
+    now = time.time()
+    if _flight_stats_cache["data"] is not None and now - _flight_stats_cache["at"] < FLIGHT_STATS_CACHE_TTL_S:
+        return _flight_stats_cache["data"]
+    data = get_flight_stats()
+    _flight_stats_cache["at"] = now
+    _flight_stats_cache["data"] = data
+    return data
+
+
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = self.path.split("?", 1)[0].rstrip("/")
         if path == "/dashboard/api/whoami":
             self._whoami()
+            return
+        if path == "/dashboard/api/flight-stats":
+            self._flight_stats()
+            return
+        if path == "/dashboard/api/settings":
+            self._get_settings()
             return
         self._json(404, {"ok": False, "error": "not found"})
 
@@ -97,6 +120,9 @@ class Handler(BaseHTTPRequestHandler):
             "/dashboard/api/restart/all": self._restart_all,
             "/dashboard/api/gain": self._set_gain,
             "/dashboard/api/muninn/interval": self._set_interval,
+            "/dashboard/api/settings": self._save_settings,
+            "/dashboard/api/settings/test-alert": self._test_alert,
+            "/dashboard/api/settings/gotify-check": self._gotify_check,
         }
         handler = routes.get(path)
         if not handler:
@@ -126,6 +152,115 @@ class Handler(BaseHTTPRequestHandler):
         if not data["ok"] and proc.returncode != 0:
             data["error"] = combined.splitlines()[-1] if combined else "whoami failed"
         self._json(200, data)
+
+    def _flight_stats(self) -> None:
+        self._json(200, cached_flight_stats())
+
+    def _get_settings(self) -> None:
+        self._json(200, get_settings())
+
+    def _save_settings(self) -> None:
+        body = self._read_body()
+        try:
+            result = save_settings(body)
+        except ValueError as exc:
+            self._json(400, {"ok": False, "error": str(exc)})
+            return
+
+        location_msg = None
+        if body.get("location"):
+            from settings_config import validate_location
+
+            try:
+                loc = validate_location(body["location"])
+            except ValueError as exc:
+                self._json(400, {"ok": False, "error": str(exc)})
+                return
+            if not SET_LOCATION.exists():
+                self._json(500, {"ok": False, "error": "location script not found"})
+                return
+            proc = run_cmd(
+                ["sudo", str(SET_LOCATION), loc["lat"], loc["lon"], loc["alt"]],
+                timeout=90,
+            )
+            combined = (proc.stdout + proc.stderr).strip()
+            if proc.returncode != 0:
+                self._json(
+                    500,
+                    {"ok": False, "error": combined.splitlines()[-1] if combined else "location update failed"},
+                )
+                return
+            location_msg = combined.splitlines()[-1] if combined else "location updated"
+            result = get_settings()
+            result["saved"] = list(set((result.get("saved") or []) + ["location"]))
+
+        refresh_status()
+        result["ok"] = True
+        if location_msg:
+            result["location_summary"] = location_msg
+        self._json(200, result)
+
+    def _test_alert(self) -> None:
+        body = self._read_body()
+        alerts = body.get("alerts") if body else None
+        if alerts:
+            try:
+                env = validate_alerts(alerts)
+            except ValueError as exc:
+                self._json(400, {"ok": False, "error": str(exc)})
+                return
+        else:
+            from settings_config import read_env_values
+
+            env = read_env_values()
+
+        url = env.get("GOTIFY_URL", "").strip()
+        app_token = env.get("GOTIFY_APP_TOKEN", "").strip()
+        if not url or not app_token:
+            self._json(400, {"ok": False, "error": "Gotify URL and app token required"})
+            return
+
+        host = "feeder"
+        try:
+            status = json.loads(STATUS_JSON.read_text(encoding="utf-8"))
+            host = status.get("hostname", host)
+        except (OSError, json.JSONDecodeError):
+            pass
+
+        ok = send_alert_with(
+            url,
+            app_token,
+            "ADS-B feeder test",
+            f"Test from {host} dashboard settings.",
+            priority=5,
+        )
+        if not ok:
+            self._json(502, {"ok": False, "error": "Gotify send failed — check URL and app token"})
+            return
+        self._json(200, {"ok": True, "summary": "Test message sent via Gotify"})
+
+    def _gotify_check(self) -> None:
+        body = self._read_body()
+        alerts = body.get("alerts") if body else None
+        if alerts:
+            try:
+                env = validate_alerts(alerts)
+            except ValueError as exc:
+                self._json(400, {"ok": False, "error": str(exc)})
+                return
+        else:
+            from settings_config import read_env_values
+
+            env = read_env_values()
+
+        url = env.get("GOTIFY_URL", "").strip()
+        app_token = env.get("GOTIFY_APP_TOKEN", "").strip()
+        try:
+            app = check_gotify(url, app_token)
+        except ValueError as exc:
+            self._json(400, {"ok": False, "error": str(exc)})
+            return
+        self._json(200, {"ok": True, "app": app, "summary": f"Connected to Gotify app “{app.get('name', 'app')}”"})
 
     def _push(self) -> None:
         target = UPLOAD_READY if UPLOAD_READY.exists() else UPLOAD

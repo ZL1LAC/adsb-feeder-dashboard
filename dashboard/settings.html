@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0f14">
+  <title>Settings — ADS-B Feeder</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css?v=8">
+</head>
+<body>
+  <header class="header">
+    <div class="header-main">
+      <h1>Settings</h1>
+      <p class="subtitle">Alerts, watchlist, station location, and receiver options</p>
+    </div>
+    <div class="header-actions">
+      <a class="btn btn-ghost" href="/dashboard/">Dashboard</a>
+      <a class="btn" href="/tar1090/" target="_blank">Live map</a>
+    </div>
+  </header>
+
+  <main class="grid settings-page">
+    <section class="card card-wide">
+      <h2>Notifications (Gotify)</h2>
+      <p class="meta settings-hint">
+        Push alerts via your Gotify server. Use the app token from <strong>Apps</strong>
+        (starts with <code>A</code>) — not the client token from the phone app.
+      </p>
+      <form id="alerts-form" class="settings-form">
+        <label class="field">
+          <span>Gotify server URL</span>
+          <input type="url" id="gotify-url" name="gotify_url" placeholder="https://alerts.lacdh.live">
+        </label>
+        <label class="field">
+          <span>App token (from Gotify → Apps)</span>
+          <input type="password" id="gotify-app-token" name="gotify_app_token" placeholder="A...token" autocomplete="off">
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span>Overhead distance (km)</span>
+            <input type="number" id="alert-overhead-km" name="alert_overhead_km" min="0.1" max="100" step="0.1">
+          </label>
+          <label class="field">
+            <span>Overhead max altitude (ft)</span>
+            <input type="number" id="alert-overhead-ft" name="alert_overhead_ft" min="100" max="50000" step="100">
+          </label>
+        </div>
+        <div class="settings-actions">
+          <button type="button" class="btn btn-ghost" id="check-gotify-btn">Test connection</button>
+          <button type="button" class="btn btn-ghost" id="test-alert-btn">Send test</button>
+          <button type="submit" class="btn">Save alerts</button>
+        </div>
+        <p class="meta" id="alerts-status"></p>
+      </form>
+    </section>
+
+    <section class="card card-wide">
+      <h2>Squawk alerts</h2>
+      <p class="meta settings-hint">
+        Gotify push when an aircraft transmits a matching squawk code.
+        Emergency codes: <strong>7500</strong> hijack, <strong>7600</strong> radio failure, <strong>7700</strong> general emergency.
+      </p>
+      <form id="squawk-form" class="settings-form">
+        <label class="field checkbox-field">
+          <input type="checkbox" id="squawk-enabled" checked>
+          <span>Enable squawk alerts</span>
+        </label>
+        <label class="field checkbox-field">
+          <input type="checkbox" id="squawk-emergency" checked>
+          <span>Emergency squawks (7500, 7600, 7700)</span>
+        </label>
+        <label class="field">
+          <span>Additional squawk codes (one per line, 4 digits)</span>
+          <textarea id="squawk-extra" rows="3" placeholder="1200&#10;4000"></textarea>
+        </label>
+        <div class="settings-actions">
+          <button type="submit" class="btn">Save squawk alerts</button>
+        </div>
+        <p class="meta" id="squawk-status"></p>
+      </form>
+    </section>
+
+    <section class="card card-wide">
+      <h2>Watchlist</h2>
+      <p class="meta settings-hint">Matches trigger dashboard highlights and Gotify alerts (30 min cooldown).</p>
+      <form id="watchlist-form" class="settings-form">
+        <label class="field">
+          <span>Callsign prefixes (one per line)</span>
+          <textarea id="watchlist-callsigns" rows="4" placeholder="ANZ&#10;QFA"></textarea>
+        </label>
+        <label class="field">
+          <span>ICAO hex (one per line, 6 digits)</span>
+          <textarea id="watchlist-hex" rows="3" placeholder="c8275c"></textarea>
+        </label>
+        <div class="settings-actions">
+          <button type="submit" class="btn">Save watchlist</button>
+        </div>
+        <p class="meta" id="watchlist-status"></p>
+      </form>
+    </section>
+
+    <section class="card card-wide">
+      <h2>Station location</h2>
+      <p class="meta settings-hint">Updates airplanes.live feeder coords and syncs readsb <code>--lat</code>/<code>--lon</code> (restarts readsb + tar1090).</p>
+      <form id="location-form" class="settings-form">
+        <div class="field-row">
+          <label class="field">
+            <span>Latitude</span>
+            <input type="text" id="location-lat" name="lat" inputmode="decimal" required>
+          </label>
+          <label class="field">
+            <span>Longitude</span>
+            <input type="text" id="location-lon" name="lon" inputmode="decimal" required>
+          </label>
+          <label class="field">
+            <span>Altitude</span>
+            <input type="text" id="location-alt" name="alt" placeholder="12m">
+          </label>
+        </div>
+        <div class="settings-actions">
+          <button type="submit" class="btn">Save location</button>
+        </div>
+        <p class="meta" id="location-status"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Receiver gain</h2>
+      <form id="gain-form" class="settings-form">
+        <div class="gain-row">
+          <input type="text" id="gain-input" placeholder="36 or auto" inputmode="decimal">
+          <button type="submit" class="btn">Apply gain</button>
+        </div>
+        <div class="gain-presets">
+          <span class="preset-label">Presets</span>
+          <button type="button" class="btn btn-ghost preset-btn" data-gain="auto">auto</button>
+          <button type="button" class="btn btn-ghost preset-btn" data-gain="36">36</button>
+          <button type="button" class="btn btn-ghost preset-btn" data-gain="40">40</button>
+          <button type="button" class="btn btn-ghost preset-btn" data-gain="49.6">49.6</button>
+        </div>
+        <p class="meta" id="gain-status"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>WDGoWars upload interval</h2>
+      <form id="interval-form" class="settings-form">
+        <div class="interval-row">
+          <label for="interval-select">Every</label>
+          <select id="interval-select">
+            <option value="1">1 min</option>
+            <option value="5">5 min</option>
+            <option value="10">10 min</option>
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+          </select>
+          <button type="submit" class="btn">Apply</button>
+        </div>
+        <p class="meta" id="interval-status"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span id="settings-footer">LAN-only — no authentication on these APIs</span>
+  </footer>
+  <script src="settings.js?v=4"></script>
+</body>
+</html>
