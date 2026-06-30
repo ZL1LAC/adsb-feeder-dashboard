@@ -361,6 +361,47 @@ tr.squawk-emergency {
   background: rgba(245, 101, 101, 0.1);
 }
 
+.squawk-cell {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  line-height: 1.2;
+  max-width: 9rem;
+  cursor: help;
+}
+
+.squawk-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.squawk-use {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.25;
+}
+
+.squawk-cell.emergency .squawk-num {
+  color: #fca5a5;
+}
+
+.squawk-cell.emergency .squawk-use {
+  color: #f87171;
+}
+
+.squawk-cell.notable .squawk-use {
+  color: #fcd34d;
+}
+
+th.col-squawk,
+td.col-squawk {
+  min-width: 5.5rem;
+}
+
 tr.watchlist-hit {
   background: rgba(61, 156, 245, 0.08);
 }
@@ -877,6 +918,69 @@ tr.watchlist-hit {
   letter-spacing: normal;
   font-size: 0.9rem;
   color: var(--text);
+}
+
+.wdg-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.wdg-upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.wdg-timer-line {
+  margin: 0;
+}
+
+.wdg-setup-prompt {
+  max-width: 32rem;
+  margin: 2rem auto;
+  text-align: center;
+}
+
+.history-table {
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.history-table td:last-child {
+  word-break: break-word;
+}
+
+.docs-block h3 {
+  font-size: 0.95rem;
+  margin: 1rem 0 0.35rem;
+}
+
+.docs-block h3:first-child {
+  margin-top: 0;
+}
+
+.docs-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.25rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.log-inline {
+  margin: 0.35rem 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+a.health-chip {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.collapse-body.collapsed {
+  display: none;
 }
 
 @media (max-width: 600px) {

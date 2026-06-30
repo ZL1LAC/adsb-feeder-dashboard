@@ -3,15 +3,15 @@ const STATUS_URL = "/dashboard/status.json";
 const HISTORY_URL = "/dashboard/history.json";
 const HISTORY_HOURLY_URL = "/dashboard/history-hourly.json";
 const FLIGHT_STATS_URL = "/dashboard/api/flight-stats";
-const WHOAMI_TTL_MS = 5 * 60 * 1000;
+const SQUAWK_CODES_URL = "/dashboard/squawk_codes.json";
 
-const EMERGENCY_SQUAWKS = {
-  "7500": "Hijack",
-  "7600": "Radio failure",
-  "7700": "Emergency",
+let SQUAWK_CODES = {
+  "7500": { label: "Hijack", category: "emergency" },
+  "7600": { label: "Radio failure", category: "emergency" },
+  "7700": { label: "General emergency", category: "emergency" },
 };
 
-let whoamiCache = { at: 0, data: null };
+let wdgConfigured = false;
 let watchlistCache = { at: 0, data: { callsigns: [], hex: [] } };
 let historyRange = "24h";
 let aircraftState = {
@@ -166,6 +166,10 @@ function sortAircraft(list, key, asc, loc) {
         av = (a.flight || "").trim().toUpperCase();
         bv = (b.flight || "").trim().toUpperCase();
         return av.localeCompare(bv) * dir;
+      case "squawk":
+        av = (a.squawk || "").trim();
+        bv = (b.squawk || "").trim();
+        return av.localeCompare(bv) * dir;
       case "rssi":
         av = a.rssi ?? -999;
         bv = b.rssi ?? -999;
@@ -191,20 +195,55 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
+function normalizeSquawk(raw) {
+  const s = String(raw || "").trim();
+  if (!s || s === "0000") return "";
+  if (/^\d+$/.test(s)) return s.padStart(4, "0");
+  return s;
+}
+
 function squawkInfo(a) {
-  const sq = String(a.squawk || "").trim();
-  if (!sq || !EMERGENCY_SQUAWKS[sq]) return null;
-  return { code: sq, label: EMERGENCY_SQUAWKS[sq] };
+  const sq = normalizeSquawk(a.squawk);
+  if (!sq) return null;
+  const meta = SQUAWK_CODES[sq];
+  if (meta) return { code: sq, label: meta.label, category: meta.category, tip: meta.tip || null };
+  return { code: sq, label: null, category: null, tip: null };
+}
+
+function squawkTooltip(info) {
+  if (!info) return "";
+  if (info.tip) return info.tip;
+  if (info.label) return `${info.code} — ${info.label}`;
+  return `${info.code} — ATC-assigned transponder code (no standard public meaning)`;
 }
 
 function fmtSquawk(a) {
-  const sq = String(a.squawk || "").trim();
-  if (!sq) return "—";
   const info = squawkInfo(a);
-  if (info) {
-    return `<span class="squawk-code emergency" title="${escapeHtml(info.label)}">${sq}</span>`;
+  if (!info) return "—";
+  const { code, label, category } = info;
+  const tip = escapeHtml(squawkTooltip(info));
+  const cls =
+    category === "emergency"
+      ? "squawk-cell emergency"
+      : label
+        ? category === "notable"
+          ? "squawk-cell notable"
+          : "squawk-cell known"
+        : "squawk-cell";
+  const attrs = `class="${cls}" title="${tip}" aria-label="${tip}"`;
+  if (label) {
+    return `<span ${attrs}><span class="squawk-num">${escapeHtml(code)}</span><span class="squawk-use">${escapeHtml(label)}</span></span>`;
   }
-  return escapeHtml(sq);
+  return `<span ${attrs}><span class="squawk-num">${escapeHtml(code)}</span></span>`;
+}
+
+async function loadSquawkCodes() {
+  try {
+    const data = await fetchJson(SQUAWK_CODES_URL);
+    if (data && typeof data === "object") SQUAWK_CODES = data;
+  } catch {
+    /* keep emergency fallback */
+  }
 }
 
 function trackerHexLink(hex) {
@@ -358,7 +397,7 @@ function renderAircraftTable(watchlist) {
         const dist = distM != null ? `${(distM / 1000).toFixed(0)} km` : "—";
         const rssi = a.rssi != null ? a.rssi.toFixed(1) : "—";
         const seen = a.seen != null ? `${a.seen.toFixed(0)}s` : "—";
-        const emergency = squawkInfo(a);
+        const emergency = squawkInfo(a)?.category === "emergency";
         const watchHit = isWatchlistHit(a, watchlist);
         const rowCls = [
           emergency ? "squawk-emergency" : "",
@@ -370,7 +409,7 @@ function renderAircraftTable(watchlist) {
         return `<tr class="${rowCls}">
         <td>${trackerHexLink(a.hex)}</td>
         <td>${watchBadge}${trackerFlightLink(flightRaw)}</td>
-        <td class="col-hide-sm">${fmtSquawk(a)}</td>
+        <td class="col-squawk">${fmtSquawk(a)}</td>
         <td>${aircraftType(a)}</td>
         <td class="col-hide-sm">${fmtCoord(a.lat)}</td>
         <td class="col-hide-sm">${fmtCoord(a.lon)}</td>
@@ -507,27 +546,43 @@ function renderFlightStats(data) {
   }
 }
 
+function healthChipLink(label, ok, warn, href) {
+  const cls = ok ? "ok" : warn ? "warn" : "bad";
+  return `<a class="health-chip ${cls}" href="${href}">${label}</a>`;
+}
+
 function renderHealthBanner(status, watchlistHits = 0) {
   const el = $("health-banner");
   if (!el) return;
   const services = status.services || {};
   const feeds = status.feeds || {};
-  const muninn = status.muninn || {};
 
   const sdrOk = status.sdr_ok !== false;
   const readsbState = (services.readsb || "").toLowerCase();
   const readsbOk = readsbState === "active";
   const readsbWarn = readsbState === "activating";
   const feedsOk = feedsHealthy(feeds, status.profile);
-  const muninnTimer = (services.muninn || "").toLowerCase() === "active";
-  const wdgOk = muninn.last_ok !== false && muninnTimer;
 
   const chips = [
     healthChip("SDR", sdrOk, false, "feeds-card"),
     healthChip("readsb", readsbOk, readsbWarn, "services-card"),
     healthChip("Feeds", feedsOk, false, "feeds-card"),
-    healthChip("WDGoWars", wdgOk, muninn.last_ok == null && muninnTimer, "wdg-card"),
   ];
+
+  if (wdgConfigured) {
+    const muninn = status.muninn || {};
+    const muninnTimer = (services.muninn || "").toLowerCase() === "active";
+    const wdgOk = muninn.last_ok !== false && muninnTimer;
+    chips.push(
+      healthChipLink(
+        "WDGoWars",
+        wdgOk,
+        muninn.last_ok == null && muninnTimer,
+        "/dashboard/wdgowars.html"
+      )
+    );
+  }
+
   if (watchlistHits > 0) {
     chips.push(
       `<button type="button" class="health-chip warn" data-scroll="aircraft-card" title="Watchlist matches">${watchlistHits} watch</button>`
@@ -536,75 +591,12 @@ function renderHealthBanner(status, watchlistHits = 0) {
   el.innerHTML = chips.join("");
 }
 
-function renderWhoami(data) {
-  if (!data?.ok) {
-    setText("wdg-user", data?.user || "—");
-    setText("wdg-aircraft-score", "—");
-    setText("wdg-total-score", "—");
-    setText("wdg-wifi-score", "—");
-    setText("wdg-ble-score", "—");
-    return;
-  }
-  setText("wdg-user", data.user || "—");
-  setText("wdg-aircraft-score", data.aircraft != null ? data.aircraft.toLocaleString() : "—");
-  setText("wdg-total-score", data.total != null ? data.total.toLocaleString() : "—");
-  setText("wdg-wifi-score", data.wifi != null ? data.wifi.toLocaleString() : "—");
-  setText("wdg-ble-score", data.ble != null ? data.ble.toLocaleString() : "—");
-}
-
-function shortSummary(text) {
-  if (!text || text === "—") return "—";
-  const s = text.replace(/\s+/g, " ").trim();
-  if (s.length <= 72) return s;
-  return `${s.slice(0, 69)}…`;
-}
-
-function uploadDotClass(entry) {
-  const s = (entry.summary || "").toLowerCase();
-  if (entry.ok === false || /error|failed/.test(s)) return "bad";
-  if (/skip:|nothing to upload/.test(s)) return "warn";
-  if (/upload accepted/.test(s) || entry.ok === true) return "ok";
-  return "warn";
-}
-
-function renderUploadTimeline(recent) {
-  const el = $("upload-timeline");
-  if (!el) return;
-  const items = (recent || []).slice().reverse();
-  if (!items.length) {
-    el.innerHTML = '<span class="timeline-empty">No uploads yet</span>';
-    return;
-  }
-  el.innerHTML = items
-    .map((r) => {
-      const cls = uploadDotClass(r);
-      const tip = `${fmtTime(r.time)}: ${r.summary || "—"}`;
-      return `<span class="timeline-dot ${cls}" title="${tip.replace(/"/g, "&quot;")}"></span>`;
-    })
-    .join("");
-}
-
 function highlightGainPreset(currentGain) {
   const g = String(currentGain || "auto").toLowerCase();
   document.querySelectorAll(".preset-btn").forEach((btn) => {
     const match = String(btn.dataset.gain || "").toLowerCase() === g;
     btn.classList.toggle("preset-active", match);
   });
-}
-
-async function loadWhoami(force = false) {
-  const now = Date.now();
-  if (!force && whoamiCache.data && now - whoamiCache.at < WHOAMI_TTL_MS) {
-    renderWhoami(whoamiCache.data);
-    return;
-  }
-  try {
-    const data = await fetchJson("/dashboard/api/whoami");
-    whoamiCache = { at: now, data };
-    renderWhoami(data);
-  } catch {
-    renderWhoami(whoamiCache.data);
-  }
 }
 
 function fmtUptime(isoOrRaw) {
@@ -668,7 +660,9 @@ async function refresh() {
     const emergencies = list
       .map((a) => {
         const info = squawkInfo(a);
-        return info ? { ...a, squawk: info.code, label: info.label } : null;
+        return info?.category === "emergency"
+          ? { ...a, squawk: info.code, label: info.label }
+          : null;
       })
       .filter(Boolean);
 
@@ -737,25 +731,6 @@ async function refresh() {
     renderAircraftTable(watchlist);
     updateSortHeaders();
 
-    const muninn = status.muninn || {};
-    const summaryEl = $("wdg-summary");
-    const summary = shortSummary(muninn.last_summary || "—");
-    if (summaryEl) {
-      summaryEl.textContent = summary;
-      summaryEl.title = muninn.last_summary || "";
-      summaryEl.className = `wdg-summary-line${muninn.last_ok === false ? " bad-text" : ""}`;
-    }
-    const nextRun = muninn.next_run ? fmtTime(muninn.next_run) : "—";
-    const nextIn = muninn.next_run_in ? ` in ${muninn.next_run_in}` : "";
-    setText("wdg-next", `Next${nextIn}${muninn.next_run ? ` · ${nextRun}` : ""}`);
-    const intervalSelect = $("interval-select");
-    if (intervalSelect && muninn.interval_min) {
-      intervalSelect.value = String(muninn.interval_min);
-    }
-    renderUploadTimeline(muninn.recent);
-
-    loadWhoami();
-
     try {
       const historyUrl = historyRange === "7d" ? HISTORY_HOURLY_URL : HISTORY_URL;
       const history = await fetchJson(historyUrl);
@@ -775,49 +750,12 @@ async function refresh() {
       renderFlightStats({ ok: false, error: "Could not load flight stats" });
     }
 
-    const logLines = filterLogLines(status.muninn_log);
-    const logEl = $("muninn-log");
-    if (logEl) {
-      if (logLines.length) {
-        logEl.innerHTML = highlightLog(logLines.join("\n"));
-      } else {
-        logEl.textContent = "No uploads yet.";
-      }
-    }
-
     const when = status.updated
       ? new Date(status.updated).toLocaleString()
       : new Date().toLocaleString();
     setText("updated", `Last refresh: ${when}`);
   } catch (err) {
     setText("updated", `Refresh error: ${err.message}`);
-  }
-}
-
-async function manualPush() {
-  const btn = $("push-btn");
-  const statusEl = $("push-status");
-  if (!btn || !statusEl) return;
-  btn.disabled = true;
-  statusEl.textContent = "Uploading…";
-  statusEl.className = "push-status pending";
-  try {
-    const data = await apiPost("/dashboard/api/push");
-    statusEl.textContent = data.summary || "Done";
-    statusEl.className = `push-status ${data.ok ? "ok" : "bad"}`;
-    if (data.output?.length) {
-      const logEl = $("muninn-log");
-      if (logEl) {
-        logEl.innerHTML = highlightLog(filterLogLines(data.output).join("\n"));
-      }
-    }
-    await refresh();
-    await loadWhoami(true);
-  } catch (err) {
-    statusEl.textContent = err.message;
-    statusEl.className = "push-status bad";
-  } finally {
-    btn.disabled = false;
   }
 }
 
@@ -861,24 +799,6 @@ async function applyGainValue(gain) {
   await applyGain();
 }
 
-async function applyInterval() {
-  const select = $("interval-select");
-  const el = $("interval-status");
-  if (!select || !el) return;
-  const minutes = Number(select.value);
-  el.textContent = `Setting interval to ${minutes} min…`;
-  el.className = "meta pending";
-  try {
-    const data = await apiPost("/dashboard/api/muninn/interval", { minutes });
-    el.textContent = data.summary || "Interval updated";
-    el.className = `meta ${data.ok ? "ok-text" : "bad-text"}`;
-    await refresh();
-  } catch (err) {
-    el.textContent = err.message;
-    el.className = "meta bad-text";
-  }
-}
-
 function initCollapsibles() {
   const mobile = window.matchMedia("(max-width: 700px)");
   const applyMobileDefault = () => {
@@ -912,8 +832,7 @@ function initCollapsibles() {
   });
 }
 
-function init() {
-  $("push-btn")?.addEventListener("click", manualPush);
+async function init() {
   $("restart-readsb-btn")?.addEventListener("click", () =>
     runOp("/dashboard/api/restart/readsb", "Restarting readsb")
   );
@@ -921,7 +840,6 @@ function init() {
     runOp("/dashboard/api/restart/all", "Restarting all services")
   );
   $("gain-btn")?.addEventListener("click", applyGain);
-  $("interval-btn")?.addEventListener("click", applyInterval);
   document.querySelectorAll(".preset-btn").forEach((btn) => {
     btn.addEventListener("click", () => applyGainValue(btn.dataset.gain || "auto"));
   });
@@ -963,6 +881,11 @@ function init() {
   });
 
   initCollapsibles();
+  await loadSquawkCodes();
+  if (typeof applyWdgNavVisibility === "function") {
+    const wdg = await applyWdgNavVisibility();
+    wdgConfigured = wdg?.configured === true;
+  }
   refresh();
   setInterval(refresh, REFRESH_MS);
 }

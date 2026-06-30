@@ -30,22 +30,68 @@ async function apiPost(url, body) {
   return data;
 }
 
+function setField(id, value) {
+  const el = $(id);
+  if (el) el.value = value;
+}
+
+function setChecked(id, checked) {
+  const el = $(id);
+  if (el) el.checked = checked;
+}
+
 function fillAlerts(alerts) {
-  $("gotify-url").value = alerts.gotify_url || "";
-  $("gotify-app-token").value = alerts.gotify_app_token || "";
-  $("alert-overhead-km").value = alerts.alert_overhead_km ?? 5;
-  $("alert-overhead-ft").value = alerts.alert_overhead_ft ?? 3000;
+  setField("gotify-url", alerts.gotify_url || "");
+  const tokenInput = $("gotify-app-token");
+  if (tokenInput) {
+    tokenInput.value = "";
+    tokenInput.placeholder = alerts.gotify_token_set
+      ? "•••••••• (saved — paste to replace)"
+      : "App token from Gotify → Apps";
+  }
+  setField("alert-overhead-km", alerts.alert_overhead_km ?? 5);
+  setField("alert-overhead-ft", alerts.alert_overhead_ft ?? 3000);
+  const hint = $("alerts-hint");
+  if (hint) {
+    hint.textContent = alerts.gotify_configured
+      ? "Gotify is configured. Token is stored on the Pi (not shown)."
+      : "Set Gotify URL and app token to enable push alerts.";
+  }
 }
 
 function fillWatchlist(watchlist) {
-  $("watchlist-callsigns").value = (watchlist.callsigns || []).join("\n");
-  $("watchlist-hex").value = (watchlist.hex || []).join("\n");
+  setField("watchlist-callsigns", (watchlist.callsigns || []).join("\n"));
+  setField("watchlist-hex", (watchlist.hex || []).join("\n"));
 }
 
 function fillSquawk(squawk) {
-  $("squawk-enabled").checked = squawk.enabled !== false;
-  $("squawk-emergency").checked = squawk.emergency !== false;
-  $("squawk-extra").value = (squawk.extra_codes || []).join("\n");
+  setChecked("squawk-enabled", squawk.enabled !== false);
+  setChecked("squawk-emergency", squawk.emergency !== false);
+  setField("squawk-extra", (squawk.extra_codes || []).join("\n"));
+}
+
+function fillWdgwars(wdg) {
+  setChecked("wdgwars-enabled", !!wdg.enabled);
+  setField("wdgwars-interval", String(wdg.upload_interval_min || 5));
+  const keyInput = $("wdgwars-api-key");
+  if (keyInput) {
+    keyInput.value = "";
+    keyInput.placeholder = wdg.api_key_set
+      ? "•••••••• (saved — paste to replace)"
+      : "Paste WDGoWars API key";
+  }
+  const hint = $("wdgwars-hint");
+  if (hint) {
+    if (wdg.configured) {
+      hint.textContent = `Configured · uploads every ${wdg.upload_interval_min || 5} min${
+        wdg.timer_active ? " (timer active)" : " (timer stopped)"
+      }.`;
+    } else if (wdg.api_key_set) {
+      hint.textContent = "API key saved — enable uploads below.";
+    } else {
+      hint.textContent = "Paste your API key from wdgwars.pl → profile → API Key.";
+    }
+  }
 }
 
 function readSquawkForm() {
@@ -57,9 +103,9 @@ function readSquawkForm() {
 }
 
 function fillLocation(location) {
-  $("location-lat").value = location.lat || "";
-  $("location-lon").value = location.lon || "";
-  $("location-alt").value = location.alt || "12m";
+  setField("location-lat", location.lat || "");
+  setField("location-lon", location.lon || "");
+  setField("location-alt", location.alt || "12m");
 }
 
 function readAlertsForm() {
@@ -86,28 +132,55 @@ function readLocationForm() {
   };
 }
 
+function readWdgwarsForm() {
+  return {
+    enabled: $("wdgwars-enabled").checked,
+    upload_interval_min: Number($("wdgwars-interval").value),
+  };
+}
+
+function setLoadStatus(message, ok) {
+  const el = $("settings-load-status");
+  if (!el) return;
+  el.textContent = message || "";
+  el.className = `subtitle${ok === true ? " ok-text" : ok === false ? " bad-text" : ""}`;
+}
+
 async function loadSettings() {
-  const data = await apiGet(SETTINGS_URL);
-  fillAlerts(data.alerts || {});
-  fillSquawk(data.squawk || {});
-  fillWatchlist(data.watchlist || {});
-  fillLocation(data.location || {});
-
-  if (!$("gotify-url").value) {
-    const host = window.location.hostname;
-    if (host && host !== "localhost") {
-      $("gotify-url").placeholder = `http://${host}:8090`;
-    }
-  }
-
+  setLoadStatus("Loading…", null);
   try {
-    const status = await apiGet(STATUS_URL);
-    const gain = status.reception?.gain;
-    if (gain) $("gain-input").placeholder = gain;
-    const minutes = status.muninn?.interval_min;
-    if (minutes) $("interval-select").value = String(minutes);
-  } catch {
-    // optional status enrichment
+    const data = await apiGet(SETTINGS_URL);
+    fillAlerts(data.alerts || {});
+    fillSquawk(data.squawk || {});
+    fillWatchlist(data.watchlist || {});
+    fillLocation(data.location || {});
+    fillWdgwars(data.wdgwars || {});
+
+    const gotifyUrl = $("gotify-url");
+    if (gotifyUrl && !gotifyUrl.value) {
+      const host = window.location.hostname;
+      if (host && host !== "localhost") {
+        gotifyUrl.placeholder = `http://${host}:8090`;
+      }
+    }
+
+    try {
+      const status = await apiGet(STATUS_URL);
+      const gain = status.reception?.gain;
+      if (gain) setField("gain-input", "");
+      const gainInput = $("gain-input");
+      if (gainInput && gain) gainInput.placeholder = String(gain);
+    } catch {
+      // optional status enrichment
+    }
+
+    if (typeof applyWdgNavVisibility === "function") {
+      await applyWdgNavVisibility();
+    }
+    setLoadStatus("Settings loaded.", true);
+  } catch (err) {
+    setLoadStatus(`Failed to load settings: ${err.message}`, false);
+    throw err;
   }
 }
 
@@ -195,15 +268,56 @@ async function applyGain(event) {
   }
 }
 
-async function applyInterval(event) {
-  event.preventDefault();
-  const minutes = Number($("interval-select").value);
-  setStatus("interval-status", `Setting interval to ${minutes} min…`, null);
+async function testWdgKey() {
+  setStatus("wdgwars-status", "Testing API key…", null);
   try {
-    const data = await apiPost("/dashboard/api/muninn/interval", { minutes });
-    setStatus("interval-status", data.summary || "Interval updated.", data.ok);
+    const key = $("wdgwars-api-key").value.trim();
+    const data = await apiPost("/dashboard/api/muninn/test-key", key ? { key } : {});
+    setStatus("wdgwars-status", data.summary || "API key OK.", true);
   } catch (err) {
-    setStatus("interval-status", err.message, false);
+    setStatus("wdgwars-status", err.message, false);
+  }
+}
+
+async function saveWdgKey() {
+  const key = $("wdgwars-api-key").value.trim();
+  if (!key) {
+    setStatus("wdgwars-status", "Paste an API key to save.", false);
+    return;
+  }
+  setStatus("wdgwars-status", "Saving API key…", null);
+  try {
+    const data = await apiPost("/dashboard/api/muninn/save-key", { key });
+    fillWdgwars(data.wdgwars || {});
+    $("wdgwars-api-key").value = "";
+    const extra = data.timer_summary ? ` ${data.timer_summary}` : "";
+    setStatus("wdgwars-status", (data.summary || "Key saved.") + extra, true);
+    if (typeof applyWdgNavVisibility === "function") {
+      await applyWdgNavVisibility();
+    }
+  } catch (err) {
+    setStatus("wdgwars-status", err.message, false);
+  }
+}
+
+async function saveWdgwars(event) {
+  event.preventDefault();
+  setStatus("wdgwars-status", "Saving…", null);
+  try {
+    const data = await apiPost(SETTINGS_URL, { wdgwars: readWdgwarsForm() });
+    fillWdgwars(data.wdgwars || {});
+    const parts = ["WDGoWars settings saved."];
+    if (data.wdgwars?.timer_active) {
+      parts.push(`Uploads every ${data.wdgwars.upload_interval_min} min.`);
+    } else if (!data.wdgwars?.enabled) {
+      parts.push("Upload timer stopped.");
+    }
+    setStatus("wdgwars-status", parts.join(" "), true);
+    if (typeof applyWdgNavVisibility === "function") {
+      await applyWdgNavVisibility();
+    }
+  } catch (err) {
+    setStatus("wdgwars-status", err.message, false);
   }
 }
 
@@ -215,7 +329,9 @@ function init() {
   $("watchlist-form")?.addEventListener("submit", saveWatchlist);
   $("location-form")?.addEventListener("submit", saveLocation);
   $("gain-form")?.addEventListener("submit", applyGain);
-  $("interval-form")?.addEventListener("submit", applyInterval);
+  $("wdgwars-form")?.addEventListener("submit", saveWdgwars);
+  $("wdgwars-test-key-btn")?.addEventListener("click", testWdgKey);
+  $("wdgwars-save-key-btn")?.addEventListener("click", saveWdgKey);
 
   document.querySelectorAll(".preset-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -224,8 +340,8 @@ function init() {
     });
   });
 
-  loadSettings().catch((err) => {
-    setStatus("alerts-status", `Failed to load settings: ${err.message}`, false);
+  loadSettings().catch(() => {
+    /* status shown in settings-load-status */
   });
 }
 

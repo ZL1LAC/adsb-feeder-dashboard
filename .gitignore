@@ -21,6 +21,7 @@ api.key
 *.key
 .env
 .env.local
+docker/.env
 
 # OS / IDE
 .DS_Store

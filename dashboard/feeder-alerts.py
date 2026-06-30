@@ -8,13 +8,13 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from feeder_paths import AIRCRAFT_JSON, DASHBOARD_DIR
+from feeder_paths import AIRCRAFT_JSON, ALERT_STATE, DASHBOARD_DIR, STATUS_JSON
 from notify import alerts_enabled, send_alert
 from squawk_alerts import EMERGENCY_SQUAWKS, load_squawk_codes, squawk_label, squawk_priority
 
-STATE_FILE = DASHBOARD_DIR / "alert-state.json"
+STATE_FILE = ALERT_STATE
 WATCHLIST_FILE = DASHBOARD_DIR / "watchlist.json"
-STATUS_FILE = DASHBOARD_DIR / "status.json"
+STATUS_FILE = STATUS_JSON
 
 OVERHEAD_KM = float(os.environ.get("ALERT_OVERHEAD_KM", "5"))
 OVERHEAD_FT = float(os.environ.get("ALERT_OVERHEAD_FT", "3000"))

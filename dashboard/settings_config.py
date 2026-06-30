@@ -18,6 +18,8 @@ ENV_KEYS = (
     "ALERT_SQUAWK_ENABLED",
     "ALERT_SQUAWK_EMERGENCY",
     "ALERT_SQUAWK_EXTRA",
+    "WDGWARS_ENABLED",
+    "WDGWARS_UPLOAD_INTERVAL_MIN",
 )
 
 DEPRECATED_ENV_KEYS = ("NTFY_SERVER", "NTFY_TOPIC", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID")
@@ -131,6 +133,8 @@ def validate_alerts(payload: dict) -> dict[str, str]:
 
     url = str(payload.get("gotify_url", "")).strip()
     app_token = str(payload.get("gotify_app_token", "")).strip()
+    if not app_token:
+        app_token = read_env_values().get("GOTIFY_APP_TOKEN", "").strip()
     url, app_token = validate_gotify_config(url, app_token)
 
     try:
@@ -165,6 +169,47 @@ def validate_location(payload: dict) -> dict[str, str]:
     return {"lat": str(lat), "lon": str(lon), "alt": alt}
 
 
+def _wdgwars_enabled(env: dict[str, str], api_key_set: bool) -> bool:
+    raw = env.get("WDGWARS_ENABLED", "")
+    if raw == "":
+        return api_key_set
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _wdgwars_interval(env: dict[str, str]) -> int:
+    try:
+        minutes = int(env.get("WDGWARS_UPLOAD_INTERVAL_MIN") or 5)
+    except ValueError:
+        minutes = 5
+    return max(1, min(60, minutes))
+
+
+def validate_wdgwars(payload: dict) -> dict[str, str]:
+    enabled = bool(payload.get("enabled", False))
+    try:
+        minutes = int(payload.get("upload_interval_min", 5))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("upload interval must be an integer") from exc
+    if not (1 <= minutes <= 60):
+        raise ValueError("upload interval must be 1–60 minutes")
+    return {
+        "WDGWARS_ENABLED": "true" if enabled else "false",
+        "WDGWARS_UPLOAD_INTERVAL_MIN": str(minutes),
+    }
+
+
+def wdgwars_settings_dict() -> dict:
+    from muninn_config import muninn_api_key_set, muninn_status_dict, muninn_timer_active
+
+    env = read_env_values()
+    api_key_set = muninn_api_key_set()
+    enabled = _wdgwars_enabled(env, api_key_set)
+    interval = _wdgwars_interval(env)
+    status = muninn_status_dict(enabled, interval)
+    status["timer_active"] = muninn_timer_active()
+    return status
+
+
 def get_settings() -> dict:
     from squawk_alerts import squawk_settings_dict
 
@@ -175,7 +220,8 @@ def get_settings() -> dict:
         "ok": True,
         "alerts": {
             "gotify_url": env.get("GOTIFY_URL", ""),
-            "gotify_app_token": env.get("GOTIFY_APP_TOKEN", ""),
+            "gotify_app_token": "",
+            "gotify_token_set": bool(env.get("GOTIFY_APP_TOKEN", "").strip()),
             "gotify_configured": bool(
                 env.get("GOTIFY_URL", "").strip() and env.get("GOTIFY_APP_TOKEN", "").strip()
             ),
@@ -185,6 +231,7 @@ def get_settings() -> dict:
         "squawk": squawk_settings_dict(),
         "watchlist": watchlist,
         "location": location,
+        "wdgwars": wdgwars_settings_dict(),
         "paths": {
             "feeder_env": str(ENV_FILE),
             "watchlist": str(WATCHLIST_FILE),
@@ -229,6 +276,22 @@ def save_settings(body: dict) -> dict:
             raise ValueError(str(exc)) from exc
         write_env_values(squawk_updates)
         saved.append("squawk")
+
+    if "wdgwars" in body and body["wdgwars"] is not None:
+        from muninn_config import muninn_api_key_set, sync_upload_timer
+
+        wdg = body["wdgwars"]
+        if "api_key" in wdg and wdg["api_key"]:
+            raise ValueError("use POST /dashboard/api/muninn/save-key for API keys")
+        try:
+            wdg_updates = validate_wdgwars(wdg)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
+        write_env_values(wdg_updates)
+        enabled = wdg_updates["WDGWARS_ENABLED"] == "true"
+        interval = int(wdg_updates["WDGWARS_UPLOAD_INTERVAL_MIN"])
+        sync_upload_timer(enabled, interval, muninn_api_key_set())
+        saved.append("wdgwars")
 
     result = get_settings()
     result["saved"] = saved

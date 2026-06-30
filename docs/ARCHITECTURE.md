@@ -29,6 +29,8 @@ flowchart LR
 | `muninn/` | WDGoWars uploader (submodule) |
 | `feeder-watch` | Restarts readsb if SDR present but decoder down |
 
+**Split stack:** SDR + readsb stay on the Pi; dashboard, alerts, and WDGoWars run on a Docker host. The Pi runs **pi-agent** (`:8780`) to expose aircraft data and ops. See [SPLIT-STACK.md](SPLIT-STACK.md).
+
 ## Timers (systemd user)
 
 | Timer | Interval | Action |

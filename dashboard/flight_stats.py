@@ -7,10 +7,10 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from feeder_paths import DASHBOARD_DIR, LOG_DIR
+from feeder_paths import LOG_DIR, STATUS_JSON, STATUS_JSON
 
 DB_PATH = LOG_DIR / "flights.sqlite"
-STATUS_FILE = DASHBOARD_DIR / "status.json"
+STATUS_FILE = STATUS_JSON
 
 
 def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

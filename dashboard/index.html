@@ -10,7 +10,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
   <header class="header">
@@ -21,10 +21,10 @@
     </div>
     <div class="header-actions">
       <a class="btn btn-ghost" href="/dashboard/settings.html">Settings</a>
+      <a class="btn btn-ghost" href="/dashboard/wdgowars.html" data-wdg-nav hidden>WDGoWars</a>
       <a class="btn" href="/tar1090/" target="_blank">Live map</a>
       <a class="btn btn-ghost" id="adsbim-local-link" href="#" target="_blank" rel="noopener" hidden>adsb.im setup</a>
       <a class="btn btn-ghost" id="aggregator-link" href="https://airplanes.live/myfeed/" target="_blank" rel="noopener">airplanes.live</a>
-      <a class="btn btn-ghost" href="https://wdgwars.pl/" target="_blank" rel="noopener">WDGoWars</a>
     </div>
   </header>
 
@@ -73,52 +73,6 @@
       </div>
     </section>
 
-    <section class="card card-compact order-wdg" id="wdg-card">
-      <div class="wdg-header">
-        <h2>WDGoWars</h2>
-        <span class="wdg-player" id="wdg-user">—</span>
-      </div>
-      <div class="wdg-score wdg-score-compact" id="wdg-score">
-        <div class="score-stat">
-          <span class="score-value" id="wdg-aircraft-score">—</span>
-          <span class="score-label">Aircraft</span>
-        </div>
-        <div class="score-stat">
-          <span class="score-value" id="wdg-total-score">—</span>
-          <span class="score-label">Total</span>
-        </div>
-        <div class="score-stat">
-          <span class="score-value" id="wdg-wifi-score">—</span>
-          <span class="score-label">WiFi</span>
-        </div>
-        <div class="score-stat">
-          <span class="score-value" id="wdg-ble-score">—</span>
-          <span class="score-label">BLE</span>
-        </div>
-      </div>
-      <div class="wdg-status-compact">
-        <div class="upload-timeline" id="upload-timeline" title="Recent uploads (oldest → newest)"></div>
-        <span class="wdg-next-line" id="wdg-next">—</span>
-      </div>
-      <p class="wdg-summary-line" id="wdg-summary">—</p>
-      <div class="wdg-actions">
-        <div class="interval-row">
-          <label for="interval-select">Every</label>
-          <select id="interval-select">
-            <option value="1">1 min</option>
-            <option value="5" selected>5 min</option>
-            <option value="10">10 min</option>
-            <option value="15">15 min</option>
-            <option value="30">30 min</option>
-          </select>
-          <button type="button" class="btn btn-ghost btn-sm" id="interval-btn">Apply</button>
-        </div>
-        <button type="button" id="push-btn" class="btn btn-sm">Push now</button>
-      </div>
-      <p class="meta" id="interval-status"></p>
-      <p id="push-status" class="push-status"></p>
-    </section>
-
     <section class="card card-wide order-aircraft" id="aircraft-card">
       <h2>Aircraft now</h2>
       <div class="table-toolbar">
@@ -131,7 +85,7 @@
             <tr>
               <th class="sortable" data-sort="hex">ICAO</th>
               <th class="sortable" data-sort="flight">Flight</th>
-              <th class="col-hide-sm">Squawk</th>
+              <th class="sortable col-squawk" data-sort="squawk">Squawk</th>
               <th>Type</th>
               <th class="col-hide-sm">Lat</th>
               <th class="col-hide-sm">Lon</th>
@@ -178,16 +132,6 @@
       </div>
     </section>
 
-    <section class="card card-wide order-log collapsible" id="log-card">
-      <div class="card-header-toggle">
-        <h2>Muninn log</h2>
-        <button type="button" class="collapse-btn" data-target="log-body" aria-expanded="true">Hide</button>
-      </div>
-      <div class="collapse-body" id="log-body">
-        <pre class="log" id="muninn-log">No uploads yet.</pre>
-      </div>
-    </section>
-
     <section class="card order-services" id="services-card">
       <h2>Services</h2>
       <ul class="service-list" id="services"></ul>
@@ -226,6 +170,7 @@
     <span id="updated">Refreshing…</span>
   </footer>
   <script src="charts.js?v=3"></script>
-  <script src="app.js?v=10"></script>
+  <script src="wdg-nav.js?v=2"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>

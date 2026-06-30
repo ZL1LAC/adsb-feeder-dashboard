@@ -1,21 +1,20 @@
 """Squawk alert configuration from feeder.env."""
 from __future__ import annotations
 
+import json
 import os
 import re
+from pathlib import Path
 
 import feeder_paths  # noqa: F401 — load feeder.env
 
-EMERGENCY_SQUAWKS = frozenset({"7500", "7600", "7700"})
+_CODES_FILE = Path(__file__).resolve().parent / "squawk_codes.json"
+_SQUAWK_DATA: dict[str, dict[str, str]] = json.loads(_CODES_FILE.read_text(encoding="utf-8"))
 
-SQUAWK_LABELS: dict[str, str] = {
-    "7500": "Hijack",
-    "7600": "Radio failure",
-    "7700": "Emergency",
-    "1200": "VFR",
-    "2000": "IFR",
-    "4000": "Military intercept",
-}
+EMERGENCY_SQUAWKS = frozenset(
+    code for code, meta in _SQUAWK_DATA.items() if meta.get("category") == "emergency"
+)
+SQUAWK_LABELS: dict[str, str] = {code: meta["label"] for code, meta in _SQUAWK_DATA.items()}
 
 
 def _truthy(raw: str | None, default: bool = True) -> bool:
@@ -40,7 +39,9 @@ def parse_squawk_codes(raw: str) -> list[str]:
 
 
 def squawk_label(code: str) -> str:
-    return SQUAWK_LABELS.get(code, f"Squawk {code}")
+    normalized = code.strip().zfill(4) if code.strip().isdigit() else code.strip()
+    meta = _SQUAWK_DATA.get(normalized, {})
+    return meta.get("label") or meta.get("tip") or f"Squawk {normalized}"
 
 
 def squawk_priority(code: str) -> int:

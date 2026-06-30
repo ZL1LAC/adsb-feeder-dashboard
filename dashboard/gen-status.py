@@ -9,20 +9,25 @@ from pathlib import Path
 
 from feeder_paths import (
     AIRCRAFT_JSON,
+    DASHBOARD_DATA,
+    HISTORY_CHART,
+    HISTORY_HOURLY_CHART,
+    HISTORY_HOURLY_LOG,
+    HISTORY_LOG,
     LOCATION_FILE,
     READSB_DEFAULT,
+    SPLIT_MODE,
     STATS_JSON as STATS,
     UPLOAD_HISTORY as HISTORY,
     UPLOAD_LOG as LOG,
+    WATCH_STATE,
 )
 from feeder_profile import FEED_PROFILE, apply_location_line, build_feeds, build_services, link_info
 
-OUT = Path(__file__).resolve().parent / "status.json"
-HISTORY_LOG = Path(__file__).resolve().parent / "history.jsonl"
-HISTORY_CHART = Path(__file__).resolve().parent / "history.json"
-HISTORY_HOURLY_LOG = Path(__file__).resolve().parent / "history-hourly.jsonl"
-HISTORY_HOURLY_CHART = Path(__file__).resolve().parent / "history-hourly.json"
-WATCH_STATE = Path(__file__).resolve().parent / "watch-state.json"
+if SPLIT_MODE:
+    from feeder_pi import configured as pi_configured, get_probe
+
+OUT = DASHBOARD_DATA / "status.json"
 AIRPLANES = LOCATION_FILE
 
 MUNINN_NOISE = (
@@ -173,24 +178,34 @@ def parse_muninn_meta() -> dict:
                     break
         except OSError:
             pass
-    timer_out = run("systemctl", "--user", "list-timers", "muninn-upload.timer", "--no-pager")
-    for line in timer_out.splitlines():
-        if "muninn-upload.timer" in line:
-            parts = line.split()
-            if len(parts) >= 4 and parts[0] not in ("NEXT", "n/a", "-"):
-                raw = " ".join(parts[0:4])
-                meta["next_run"] = to_iso_timestamp(raw) or raw
-            if len(parts) >= 6:
-                meta["next_run_in"] = f"{parts[4]} {parts[5]}"
-            break
-    timer_show = run(
-        "systemctl", "--user", "show", "muninn-upload.timer", "-p", "TimersMonotonic", "--value"
-    )
-    if timer_show:
-        m = re.search(r"OnUnitActiveUSec=(\d+)(min|s)", timer_show)
-        if m:
-            val, unit = int(m.group(1)), m.group(2)
-            meta["interval_min"] = val if unit == "min" else max(1, round(val / 60))
+    if not SPLIT_MODE:
+        timer_out = run("systemctl", "--user", "list-timers", "muninn-upload.timer", "--no-pager")
+        for line in timer_out.splitlines():
+            if "muninn-upload.timer" in line:
+                parts = line.split()
+                if len(parts) >= 4 and parts[0] not in ("NEXT", "n/a", "-"):
+                    raw = " ".join(parts[0:4])
+                    meta["next_run"] = to_iso_timestamp(raw) or raw
+                if len(parts) >= 6:
+                    meta["next_run_in"] = f"{parts[4]} {parts[5]}"
+                break
+        timer_show = run(
+            "systemctl", "--user", "show", "muninn-upload.timer", "-p", "TimersMonotonic", "--value"
+        )
+        if timer_show:
+            m = re.search(r"OnUnitActiveUSec=(\d+)(min|s)", timer_show)
+            if m:
+                val, unit = int(m.group(1)), m.group(2)
+                meta["interval_min"] = val if unit == "min" else max(1, round(val / 60))
+    if SPLIT_MODE:
+        from muninn_config import read_upload_schedule
+
+        sched = read_upload_schedule()
+        if sched.get("enabled"):
+            meta["interval_min"] = sched.get("minutes")
+            meta["next_run"] = sched.get("next_run")
+            if sched.get("last_run") and sched.get("minutes"):
+                meta["next_run_in"] = f"every {sched['minutes']} min"
     return meta
 
 
@@ -362,6 +377,58 @@ def read_watch_state() -> dict:
 
 
 def main() -> None:
+    if SPLIT_MODE and pi_configured():
+        probe = get_probe()
+        if probe.get("hostname"):
+            stats = probe.get("reception") or {}
+            signal = stats.get("signal")
+            noise = stats.get("noise")
+            snr = stats.get("snr")
+            loc = probe.get("location") or {}
+            readsb_loc = probe.get("readsb_location") or {}
+            loc_match = readsb_loc.get("matches_airplanes")
+            max_dist = stats.get("max_distance")
+            ac = read_aircraft_counts()
+            if not max_dist:
+                max_dist = max_distance_from_aircraft(loc)
+            muninn_meta = parse_muninn_meta()
+            append_history({
+                "aircraft_total": ac["total"],
+                "aircraft_positioned": ac["positioned"],
+                "messages": stats.get("messages") or ac["messages"],
+                "snr": snr,
+                "max_distance": max_dist,
+                "upload_ok": muninn_meta.get("last_ok"),
+            })
+            payload = {
+                "updated": datetime.now(timezone.utc).isoformat(),
+                "hostname": probe.get("hostname", "pi"),
+                "profile": probe.get("profile", FEED_PROFILE),
+                "links": link_info(),
+                "services": probe.get("services") or {},
+                "uptime": probe.get("uptime") or {},
+                "reception": {
+                    "gain": stats.get("gain") or probe.get("gain", "unknown"),
+                    "signal": signal,
+                    "noise": noise,
+                    "snr": snr,
+                    "max_distance": max_dist,
+                },
+                "feeds": probe.get("feeds") or {},
+                "sdr": probe.get("sdr", "unknown"),
+                "sdr_ok": probe.get("sdr_ok", False),
+                "watch": probe.get("watch") or {},
+                "location": loc,
+                "readsb_location": readsb_loc,
+                "muninn": muninn_meta,
+                "muninn_log": muninn_log_tail(),
+                "deploy_mode": "split",
+                "pi_agent_ok": True,
+            }
+            DASHBOARD_DATA.mkdir(parents=True, exist_ok=True)
+            OUT.write_text(json.dumps(payload, indent=2))
+            return
+
     stats = read_stats()
     signal = stats.get("signal")
     noise = stats.get("noise")

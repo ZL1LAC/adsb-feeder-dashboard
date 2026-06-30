@@ -6,16 +6,17 @@
   <meta name="theme-color" content="#0b0f14">
   <title>Settings — ADS-B Feeder</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
   <header class="header">
     <div class="header-main">
       <h1>Settings</h1>
-      <p class="subtitle">Alerts, watchlist, station location, and receiver options</p>
+      <p class="subtitle" id="settings-load-status">Loading settings…</p>
     </div>
     <div class="header-actions">
       <a class="btn btn-ghost" href="/dashboard/">Dashboard</a>
+      <a class="btn btn-ghost" href="/dashboard/wdgowars.html" data-wdg-nav hidden>WDGoWars</a>
       <a class="btn" href="/tar1090/" target="_blank">Live map</a>
     </div>
   </header>
@@ -34,7 +35,7 @@
         </label>
         <label class="field">
           <span>App token (from Gotify → Apps)</span>
-          <input type="password" id="gotify-app-token" name="gotify_app_token" placeholder="A...token" autocomplete="off">
+          <input type="password" id="gotify-app-token" name="gotify_app_token" placeholder="App token from Gotify → Apps" autocomplete="off">
         </label>
         <div class="field-row">
           <label class="field">
@@ -46,6 +47,7 @@
             <input type="number" id="alert-overhead-ft" name="alert_overhead_ft" min="100" max="50000" step="100">
           </label>
         </div>
+        <p class="meta settings-hint" id="alerts-hint"></p>
         <div class="settings-actions">
           <button type="button" class="btn btn-ghost" id="check-gotify-btn">Test connection</button>
           <button type="button" class="btn btn-ghost" id="test-alert-btn">Send test</button>
@@ -143,21 +145,40 @@
       </form>
     </section>
 
-    <section class="card">
-      <h2>WDGoWars upload interval</h2>
-      <form id="interval-form" class="settings-form">
-        <div class="interval-row">
-          <label for="interval-select">Every</label>
-          <select id="interval-select">
-            <option value="1">1 min</option>
-            <option value="5">5 min</option>
-            <option value="10">10 min</option>
-            <option value="15">15 min</option>
-            <option value="30">30 min</option>
-          </select>
-          <button type="submit" class="btn">Apply</button>
+    <section class="card card-wide" id="wdgwars-section">
+      <h2>WDGoWars</h2>
+      <p class="meta settings-hint">
+        Upload ADS-B sightings to <a href="https://wdgwars.pl/" target="_blank" rel="noopener">wdgwars.pl</a>.
+        Get your API key from profile → API Key. The WDGoWars tab appears once enabled and a key is saved.
+      </p>
+      <p class="meta settings-hint" id="wdgwars-hint"></p>
+      <form id="wdgwars-form" class="settings-form">
+        <label class="field checkbox-field">
+          <input type="checkbox" id="wdgwars-enabled">
+          <span>Enable WDGoWars uploads</span>
+        </label>
+        <label class="field">
+          <span>API key</span>
+          <input type="password" id="wdgwars-api-key" placeholder="Paste key to change (leave blank to keep)" autocomplete="off">
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span>Upload interval</span>
+            <select id="wdgwars-interval">
+              <option value="1">1 min</option>
+              <option value="5">5 min</option>
+              <option value="10">10 min</option>
+              <option value="15">15 min</option>
+              <option value="30">30 min</option>
+            </select>
+          </label>
         </div>
-        <p class="meta" id="interval-status"></p>
+        <div class="settings-actions">
+          <button type="button" class="btn btn-ghost" id="wdgwars-test-key-btn">Test key</button>
+          <button type="button" class="btn btn-ghost" id="wdgwars-save-key-btn">Save key</button>
+          <button type="submit" class="btn">Save WDGoWars</button>
+        </div>
+        <p class="meta" id="wdgwars-status"></p>
       </form>
     </section>
   </main>
@@ -165,6 +186,7 @@
   <footer class="footer">
     <span id="settings-footer">LAN-only — no authentication on these APIs</span>
   </footer>
-  <script src="settings.js?v=4"></script>
+  <script src="wdg-nav.js?v=2"></script>
+  <script src="settings.js?v=7"></script>
 </body>
 </html>

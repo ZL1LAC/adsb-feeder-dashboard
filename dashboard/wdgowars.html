@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0f14">
+  <title>WDGoWars — ADS-B Feeder</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css?v=9">
+</head>
+<body>
+  <header class="header">
+    <div class="header-main">
+      <h1>WDGoWars</h1>
+      <p class="subtitle">Scores, uploads, and Muninn log</p>
+    </div>
+    <div class="header-actions">
+      <a class="btn btn-ghost" href="/dashboard/">Dashboard</a>
+      <a class="btn btn-ghost" href="/dashboard/wdgowars.html" data-wdg-nav hidden>WDGoWars</a>
+      <a class="btn btn-ghost" href="/dashboard/settings.html">Settings</a>
+      <a class="btn" href="https://wdgwars.pl/" target="_blank" rel="noopener">wdgwars.pl</a>
+    </div>
+  </header>
+
+  <main class="grid wdg-page" id="wdg-main" hidden>
+    <section class="card card-wide">
+      <div class="wdg-header">
+        <h2>Account</h2>
+        <span class="wdg-player" id="wdg-user">—</span>
+      </div>
+      <div class="wdg-score wdg-score-compact" id="wdg-score">
+        <div class="score-stat">
+          <span class="score-value" id="wdg-aircraft-score">—</span>
+          <span class="score-label">Aircraft</span>
+        </div>
+        <div class="score-stat">
+          <span class="score-value" id="wdg-total-score">—</span>
+          <span class="score-label">Total</span>
+        </div>
+        <div class="score-stat">
+          <span class="score-value" id="wdg-wifi-score">—</span>
+          <span class="score-label">WiFi</span>
+        </div>
+        <div class="score-stat">
+          <span class="score-value" id="wdg-ble-score">—</span>
+          <span class="score-label">BLE</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card card-wide">
+      <h2>Uploads</h2>
+      <div class="wdg-upload-actions">
+        <button type="button" id="push-btn" class="btn">Push now</button>
+        <p class="meta wdg-timer-line" id="wdg-next">—</p>
+      </div>
+      <p class="wdg-summary-line" id="wdg-summary">—</p>
+      <p id="push-status" class="push-status"></p>
+      <p class="meta settings-hint">
+        Upload interval and API key are configured in
+        <a href="/dashboard/settings.html#wdgwars-section">Settings → WDGoWars</a>.
+      </p>
+    </section>
+
+    <section class="card card-wide">
+      <h2>Upload history</h2>
+      <p class="meta" id="history-stats">—</p>
+      <div class="table-wrap">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Result</th>
+              <th>Summary</th>
+            </tr>
+          </thead>
+          <tbody id="history-rows">
+            <tr><td colspan="3" class="empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card card-wide">
+      <h2>Muninn log</h2>
+      <pre class="log" id="muninn-log">No uploads yet.</pre>
+    </section>
+
+    <section class="card card-wide collapsible" id="muninn-docs-card">
+      <div class="card-header-toggle">
+        <h2>Muninn CLI reference</h2>
+        <button type="button" class="collapse-btn" data-target="muninn-docs-body" aria-expanded="false">Show</button>
+      </div>
+      <div class="collapse-body collapsed" id="muninn-docs-body">
+        <div class="docs-block">
+          <h3>Pi feeder flow</h3>
+          <p class="meta">readsb writes <code>/run/readsb/aircraft.json</code> → <code>upload-if-ready.sh</code> (skips when no positioned aircraft) → <code>muninn.py --upload</code> → wdgwars.pl</p>
+          <h3>Go live (CLI)</h3>
+          <pre class="log log-inline">./scripts/go-live.sh YOUR_API_KEY [minutes]</pre>
+          <h3>Useful commands</h3>
+          <ul class="docs-list">
+            <li><code>muninn.py --whoami</code> — verify API key and show scores</li>
+            <li><code>muninn.py --save-key KEY</code> — store API key</li>
+            <li><code>muninn.py aircraft.json --upload</code> — one-shot upload</li>
+            <li><code>muninn.py file --upload --dry-run</code> — preview without sending</li>
+            <li><code>muninn.py --config</code> — show key status (not the key itself)</li>
+          </ul>
+          <h3>Input formats (auto-detect)</h3>
+          <p class="meta">AVR raw Mode-S, SBS-1/MSG CSV, dump1090/readsb <code>aircraft.json</code>, generic CSV, BaseStation .sqb</p>
+          <h3>Logs</h3>
+          <pre class="log log-inline">./scripts/tail-log.sh</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <section class="card card-wide wdg-setup-prompt" id="wdg-setup" hidden>
+    <h2>WDGoWars not configured</h2>
+    <p class="meta">Enable WDGoWars and save your API key in Settings to use this page.</p>
+    <a class="btn" href="/dashboard/settings.html#wdgwars-section">Open WDGoWars settings</a>
+  </section>
+
+  <footer class="footer">
+    <span id="updated">Refreshing…</span>
+  </footer>
+  <script src="wdg-nav.js?v=2"></script>
+  <script src="wdgowars.js?v=1"></script>
+</body>
+</html>

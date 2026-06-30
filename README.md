@@ -59,11 +59,31 @@ git submodule update --init --recursive
 ./scripts/go-live.sh YOUR_WDGOWARS_API_KEY   # optional
 ```
 
+### Split stack (SDR on Pi, dashboard on another host)
+
+Keep the RTL-SDR and decoder on the Pi; run the dashboard, alerts, and WDGoWars uploads in Docker on another machine (NAS, VM, etc.).
+
+**On the Pi (decode host):**
+
+```bash
+./scripts/install-pi-decode-only.sh
+```
+
+**On the Docker host:**
+
+```bash
+cd docker && cp .env.example .env   # set PI_HOST, PI_AGENT_URL, PI_AGENT_TOKEN
+../scripts/install-split-docker.sh
+```
+
+See [Split-stack deployment](docs/SPLIT-STACK.md) for networking, reverse proxy, and troubleshooting.
+
 ## Documentation
 
 - [Install with airplanes.live](docs/INSTALL-airplanes-live.md)
 - [Install with adsb.im](docs/INSTALL-adsbim.md)
 - [Install readsb-only](docs/INSTALL-readsb-only.md)
+- [Split stack (SDR on Pi, dashboard elsewhere)](docs/SPLIT-STACK.md)
 - [Architecture](docs/ARCHITECTURE.md)
 
 ## Configuration

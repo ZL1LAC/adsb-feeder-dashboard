@@ -1,0 +1,167 @@
+{
+  "7500": {
+    "label": "Hijack",
+    "category": "emergency",
+    "tip": "7500 — Unlawful interference (hijack). ICAO worldwide emergency code; ATC treats as highest priority."
+  },
+  "7600": {
+    "label": "Radio failure",
+    "category": "emergency",
+    "tip": "7600 — Radio communication failure. Pilot has lost two-way contact with ATC."
+  },
+  "7700": {
+    "label": "General emergency",
+    "category": "emergency",
+    "tip": "7700 — General emergency. Used for any urgent situation requiring priority handling."
+  },
+  "1200": {
+    "label": "VFR aeroplane",
+    "category": "standard",
+    "tip": "NZ: VFR civil aeroplanes when no discrete ATC code assigned. US/Canada: VFR conspicuity in uncontrolled airspace."
+  },
+  "1177": {
+    "label": "VFR conspicuity (ICAO)",
+    "category": "standard",
+    "tip": "1177 — VFR conspicuity code used in some ICAO regions when not assigned a discrete code."
+  },
+  "7000": {
+    "label": "VFR conspicuity (Europe)",
+    "category": "standard",
+    "tip": "7000 — VFR conspicuity in Europe when flying without an ATC-assigned code."
+  },
+  "2000": {
+    "label": "IFR / Oceanic VFR",
+    "category": "standard",
+    "tip": "NZ: IFR in NZ FIR (or assigned code); VFR in Auckland Oceanic FIR. Elsewhere: IFR entering controlled airspace before receiving a discrete ATC squawk."
+  },
+  "0111": {
+    "label": "Fire / recon (NZ)",
+    "category": "notable",
+    "tip": "NZ: Fire suppression and reconnaissance (fixed-wing and helicopters) per AIP NZ ENR 1.6."
+  },
+  "0020": {
+    "label": "VFR helicopter SAR (UK)",
+    "category": "notable",
+    "tip": "0020 — UK: VFR helicopter search-and-rescue operations."
+  },
+  "0021": {
+    "label": "VFR below FL195 (UK)",
+    "category": "standard",
+    "tip": "0021 — UK: VFR flight not above FL195."
+  },
+  "0022": {
+    "label": "VFR above FL195 (UK)",
+    "category": "standard",
+    "tip": "0022 — UK: VFR flight above FL195."
+  },
+  "0023": {
+    "label": "VFR military / special (UK)",
+    "category": "notable",
+    "tip": "0023 — UK: VFR military or special operations."
+  },
+  "0033": {
+    "label": "Parachute operations",
+    "category": "notable",
+    "tip": "0033 — Parachute dropping in progress; alerts ATC and nearby traffic."
+  },
+  "0034": {
+    "label": "Ground SAR operation",
+    "category": "notable",
+    "tip": "0034 — UK: ground search-and-rescue operation."
+  },
+  "0036": {
+    "label": "Military low-level / formation",
+    "category": "notable",
+    "tip": "0036 — UK: military low-level or formation flying."
+  },
+  "0040": {
+    "label": "Glider (UK)",
+    "category": "standard",
+    "tip": "0040 — UK: glider operating under VFR."
+  },
+  "0041": {
+    "label": "Tow / glider release (UK)",
+    "category": "standard",
+    "tip": "0041 — UK: glider towing or release."
+  },
+  "0042": {
+    "label": "Glider winch launch (UK)",
+    "category": "standard",
+    "tip": "0042 — UK: glider winch launching."
+  },
+  "0043": {
+    "label": "Aerobatic practice (UK)",
+    "category": "notable",
+    "tip": "0043 — UK: aerobatic practice."
+  },
+  "0044": {
+    "label": "Aerobatic flight (UK)",
+    "category": "notable",
+    "tip": "0044 — UK: aerobatic display or flight."
+  },
+  "0050": {
+    "label": "ATC assigned (UK)",
+    "category": "standard",
+    "tip": "0050 — UK: reserved band for ATC-assigned codes in some FIRs."
+  },
+  "0066": {
+    "label": "Glider – left-hand circuit (UK)",
+    "category": "standard",
+    "tip": "0066 — UK: glider flying a left-hand circuit."
+  },
+  "0070": {
+    "label": "VFR conspicuity (UK)",
+    "category": "standard",
+    "tip": "0070 — UK: VFR conspicuity when not receiving a discrete ATC assignment."
+  },
+  "0077": {
+    "label": "VFR conspicuity (UK)",
+    "category": "standard",
+    "tip": "0077 — UK: VFR conspicuity code."
+  },
+  "0735": {
+    "label": "CCAMS assigned",
+    "category": "standard",
+    "tip": "0735 — UK/Europe: discrete code allocated by CCAMS (Centralised Code Assignment) for en-route ATC identification. Range 0730–0767."
+  },
+  "1300": {
+    "label": "Glider / balloon (NZ)",
+    "category": "standard",
+    "tip": "NZ: VFR gliders and balloons when no discrete ATC code assigned."
+  },
+  "1400": {
+    "label": "GA areas (NZ)",
+    "category": "standard",
+    "tip": "NZ: Powered aircraft in designated general aviation areas. (UK uses 1400 for FIS listening squawk.)"
+  },
+  "1500": {
+    "label": "Helicopter VFR (NZ)",
+    "category": "standard",
+    "tip": "NZ: Civil helicopters when no discrete ATC code assigned."
+  },
+  "2200": {
+    "label": "Controlled circuit (NZ)",
+    "category": "standard",
+    "tip": "NZ: VFR aircraft in the aerodrome traffic circuit at a controlled aerodrome."
+  },
+  "4000": {
+    "label": "Military intercept / handoff",
+    "category": "notable",
+    "tip": "4000 — Military intercept operations or negotiating transfer to another ATC unit."
+  },
+  "4400": {
+    "label": "DVFR (UK)",
+    "category": "standard",
+    "tip": "4400 — UK: defence VFR flight rules traffic."
+  },
+  "6000": {
+    "label": "Defence / military",
+    "category": "notable",
+    "tip": "NZ: Defence aeroplanes (VFR). Also used elsewhere for military operations."
+  },
+  "6500": {
+    "label": "Defence heli (NZ)",
+    "category": "notable",
+    "tip": "NZ: Defence helicopters when no discrete ATC code assigned."
+  }
+}

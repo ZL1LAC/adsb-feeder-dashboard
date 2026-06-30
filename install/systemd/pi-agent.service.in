@@ -1,0 +1,15 @@
+[Unit]
+Description=ADS-B Pi agent (split-stack decode host)
+After=network.target readsb.service
+
+[Service]
+Type=simple
+EnvironmentFile=-@REPO_ROOT@/feeder.env
+Environment=PI_AGENT_HOST=0.0.0.0
+Environment=PI_AGENT_PORT=8780
+ExecStart=/usr/bin/python3 @REPO_ROOT@/pi-agent/pi-agent.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

@@ -6,9 +6,12 @@ source "$(dirname "$0")/feeder-env.sh"
 MUNINN_REPO="${MUNINN_REPO:-https://github.com/Yggdrasil-AI-labs/adsb-to-wdgwars.git}"
 MUNINN_BRANCH="${MUNINN_BRANCH:-main}"
 
-if [[ ! -d "$MUNINN_ROOT/.git" ]]; then
+if [[ -f "$MUNINN_ROOT/muninn.py" ]] || [[ -x "$MUNINN_ROOT/setup.sh" ]]; then
+  echo "Using existing Muninn at $MUNINN_ROOT"
+elif [[ ! -d "$MUNINN_ROOT/.git" ]]; then
   echo "Cloning Muninn into $MUNINN_ROOT ..."
   mkdir -p "$(dirname "$MUNINN_ROOT")"
+  rm -rf "$MUNINN_ROOT"
   git clone --depth 1 --branch "$MUNINN_BRANCH" "$MUNINN_REPO" "$MUNINN_ROOT"
 fi
 

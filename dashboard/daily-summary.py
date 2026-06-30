@@ -6,12 +6,11 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from feeder_paths import DASHBOARD_DIR, LOG_DIR
+from feeder_paths import ALERT_STATE, HISTORY_LOG, UPLOAD_HISTORY as UPLOAD_HISTORY_FILE
 from notify import alerts_enabled, send_alert
 
-HISTORY_LOG = DASHBOARD_DIR / "history.jsonl"
-UPLOAD_HISTORY = LOG_DIR / "upload-history.json"
-STATE_FILE = DASHBOARD_DIR / "alert-state.json"
+UPLOAD_HISTORY = UPLOAD_HISTORY_FILE
+STATE_FILE = ALERT_STATE
 
 
 def load_json(path: Path, default):
