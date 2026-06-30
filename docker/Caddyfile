@@ -9,17 +9,17 @@
 
   handle /dashboard/status.json {
     rewrite * /status.json
-    root * /data/dashboard
+    root * /data/feeder/dashboard
     file_server
   }
   handle /dashboard/history.json {
     rewrite * /history.json
-    root * /data/dashboard
+    root * /data/feeder/dashboard
     file_server
   }
   handle /dashboard/history-hourly.json {
     rewrite * /history-hourly.json
-    root * /data/dashboard
+    root * /data/feeder/dashboard
     file_server
   }
 

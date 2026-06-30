@@ -9,7 +9,7 @@ echo "Installing Pi decode-only profile (split stack)..."
 bash "$SCRIPTS_DIR/install-pi-agent.sh"
 
 # Disable local dashboard stack if present
-for unit in feeder-api feeder-dashboard.timer feeder-alerts.timer feeder-flight-log.timer feeder-daily-summary.timer muninn-upload.timer; do
+for unit in feeder-api feeder-push-api feeder-dashboard.timer feeder-alerts.timer feeder-flight-log.timer feeder-daily-summary.timer muninn-upload.timer; do
   systemctl --user disable --now "$unit" 2>/dev/null || true
 done
 

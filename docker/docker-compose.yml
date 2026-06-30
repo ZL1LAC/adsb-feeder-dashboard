@@ -31,7 +31,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ../dashboard:/srv/dashboard:ro
-      - feeder-data:/data:ro
+      - feeder-data:/data/feeder:ro
     depends_on:
       - feeder-api
     networks:
