@@ -45,6 +45,14 @@ set_env PI_AGENT_TOKEN "$PI_AGENT_TOKEN"
 [[ -n "${GOTIFY_URL:-}" ]] && set_env GOTIFY_URL "$GOTIFY_URL"
 [[ -n "${GOTIFY_APP_TOKEN:-}" ]] && set_env GOTIFY_APP_TOKEN "$GOTIFY_APP_TOKEN"
 
+if [[ -n "${DASHBOARD_AUTH_HASH:-}" && -n "${DASHBOARD_AUTH_USER:-}" ]]; then
+  cp Caddyfile.auth Caddyfile.active
+  echo "Dashboard login: enabled (user ${DASHBOARD_AUTH_USER})"
+else
+  cp Caddyfile Caddyfile.active
+  echo "Dashboard login: disabled (LAN-only). Run ../scripts/set-dashboard-password.sh to enable."
+fi
+
 if docker compose version >/dev/null 2>&1; then
   docker compose up -d --build
 else

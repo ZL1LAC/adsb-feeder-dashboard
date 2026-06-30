@@ -112,6 +112,26 @@ All requests use `Authorization: Bearer <PI_AGENT_TOKEN>` when a token is set.
 | Ops buttons fail | pi-agent sudoers; token matches |
 | Gotify silent | `GOTIFY_URL` reachable from Docker host |
 | WDGoWars no upload | API key in Settings; `/data/upload-schedule.json` enabled |
+| 401 on dashboard | Login enabled — run `set-dashboard-password.sh` or clear `DASHBOARD_AUTH_*` in `docker/.env` |
+
+## Dashboard login (optional)
+
+For public URLs (e.g. behind `docker.lacdh.live`), enable HTTP basic auth:
+
+```bash
+./scripts/set-dashboard-password.sh admin
+cd docker && docker compose up -d caddy
+```
+
+Protects `/dashboard/` and `/tar1090/` (including the API). Pi **pi-agent** uses a separate bearer token (`PI_AGENT_TOKEN`).
+
+## Pi cleanup after split-stack
+
+```bash
+./scripts/cleanup-pi-decode-only.sh
+```
+
+Removes unused dashboard systemd units and local runtime data from the decode host.
 
 ## Reverting to all-on-Pi
 

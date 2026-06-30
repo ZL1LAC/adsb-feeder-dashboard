@@ -28,8 +28,10 @@ services:
       - "${DASHBOARD_PORT:-8080}:80"
     environment:
       PI_HOST: ${PI_HOST}
+      DASHBOARD_AUTH_USER: ${DASHBOARD_AUTH_USER:-}
+      DASHBOARD_AUTH_HASH: ${DASHBOARD_AUTH_HASH:-}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.active:/etc/caddy/Caddyfile:ro
       - ../dashboard:/srv/dashboard:ro
       - feeder-data:/data/feeder:ro
     depends_on:

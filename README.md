@@ -100,6 +100,15 @@ For push notifications, run [Gotify](https://gotify.net/) (see `scripts/install-
 
 Squawk alerts: emergency codes 7500/7600/7700 are on by default; add custom codes in Settings (comma-separated).
 
+**Dashboard login (Docker / split stack):** optional HTTP basic auth for public URLs:
+
+```bash
+./scripts/set-dashboard-password.sh admin
+cd docker && docker compose up -d caddy
+```
+
+Browser will prompt for username/password on `/dashboard/` and `/tar1090/`. Leave unset for trusted LAN only.
+
 ## Logs
 
 Muninn upload logs (when user journal is empty):

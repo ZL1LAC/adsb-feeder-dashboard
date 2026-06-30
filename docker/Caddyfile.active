@@ -1,0 +1,38 @@
+{
+  admin localhost:2019
+}
+
+:80 {
+  handle /dashboard/api/* {
+    reverse_proxy feeder-api:8765
+  }
+
+  handle /dashboard/status.json {
+    rewrite * /status.json
+    root * /data/feeder/dashboard
+    file_server
+  }
+  handle /dashboard/history.json {
+    rewrite * /history.json
+    root * /data/feeder/dashboard
+    file_server
+  }
+  handle /dashboard/history-hourly.json {
+    rewrite * /history-hourly.json
+    root * /data/feeder/dashboard
+    file_server
+  }
+
+  handle /tar1090/* {
+    reverse_proxy http://{$PI_HOST}:80
+  }
+
+  handle_path /dashboard/* {
+    root * /srv/dashboard
+    file_server
+  }
+
+  handle {
+    redir / /dashboard/ permanent
+  }
+}
